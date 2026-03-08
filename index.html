@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memento Mori</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #000000;
+    --text: #e8e0d0;
+    --dim: #666;
+    --accent: #c8a96e;
+    --red: #8b1a1a;
+    --ui: rgba(255,255,255,0.07);
+    --ui-hover: rgba(255,255,255,0.13);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    overflow: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  #cursor {
+    position: fixed; width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s;
+    mix-blend-mode: difference;
+  }
+
+  /* ── LANGUAGE SELECTOR ── */
+  #lang-screen {
+    position: fixed; inset: 0;
+    background: #000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    gap: 48px;
+    animation: fadeIn 1s ease;
+  }
+
+  .lang-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(18px, 4vw, 36px);
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-align: center;
+    opacity: 0.9;
+  }
+
+  .lang-subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-top: -36px;
+  }
+
+  .lang-options {
+    display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
+  }
+
+  .lang-btn {
+    background: none;
+    border: 1px solid rgba(200,169,110,0.3);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    padding: 14px 36px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lang-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--accent);
+    transform: translateX(-100%);
+    transition: transform 0.3s;
+    z-index: -1;
+    opacity: 0.15;
+  }
+
+  .lang-btn:hover::before { transform: translateX(0); }
+  .lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .lang-divider {
+    width: 1px; height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  /* ── MAIN APP ── */
+  #app {
+    position: fixed; inset: 0;
+    background: #000;
+    display: none;
+    align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Subtle vignette */
+  #app::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Blood splatter effect on transition */
+  #splatter {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+  }
+
+  /* Quote container */
+  #quote-container {
+    position: relative;
+    z-index: 2;
+    max-width: min(800px, 85vw);
+    text-align: center;
+    padding: 40px;
+  }
+
+  #quote-line {
+    width: 60px; height: 1px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+    margin: 0 auto 32px;
+    opacity: 0;
+  }
+
+  #quote-text {
+    font-size: clamp(18px, 3.5vw, 32px);
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    opacity: 0;
+    text-shadow: 0 0 40px rgba(200,169,110,0.08);
+  }
+
+  #quote-author {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(10px, 1.5vw, 13px);
+    letter-spacing: 0.35em;
+    color: var(--accent);
+    margin-top: 28px;
+    opacity: 0;
+    text-transform: uppercase;
+  }
+
+  #quote-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--red);
+    margin-top: 8px;
+    opacity: 0;
+    text-transform: uppercase;
+  }
+
+  /* Progress bar */
+  #progress-bar {
+    position: fixed; bottom: 0; left: 0;
+    height: 1px;
+    background: linear-gradient(to right, var(--red), var(--accent));
+    width: 0%;
+    transition: width linear;
+    z-index: 10;
+    opacity: 0.6;
+  }
+
+  /* Counter */
+  #counter {
+    position: fixed; top: 24px; right: 28px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    z-index: 10;
+    transition: opacity 0.5s;
+  }
+
+  /* ── UI CONTROLS ── */
+  #controls {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px;
+    z-index: 10;
+    transition: opacity 0.6s;
+  }
+
+  .ctrl-btn {
+    background: var(--ui);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: all 0.25s;
+    white-space: nowrap;
+  }
+
+  .ctrl-btn:hover {
+    background: var(--ui-hover);
+    border-color: rgba(200,169,110,0.3);
+    color: var(--accent);
+  }
+
+  .ctrl-btn svg {
+    width: 13px; height: 13px;
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+
+  /* screenshot flash */
+  #flash {
+    position: fixed; inset: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* transition overlay */
+  #curtain {
+    position: fixed; inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes textReveal {
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes flashWhite {
+    0%   { opacity: 0.8 }
+    100% { opacity: 0 }
+  }
+  @keyframes curtainFade {
+    0%   { opacity: 1 }
+    100% { opacity: 0 }
+  }
+  @keyframes glitch {
+    0%   { clip-path: inset(0 0 100% 0); opacity: 1; }
+    20%  { clip-path: inset(30% 0 40% 0); }
+    40%  { clip-path: inset(60% 0 10% 0); }
+    60%  { clip-path: inset(10% 0 70% 0); }
+    80%  { clip-path: inset(50% 0 30% 0); }
+    100% { clip-path: inset(0 0 0% 0); opacity: 1; }
+  }
+
+  .quote-animate .reveal-0 { animation: textReveal 0.6s ease 0.1s both; }
+  .quote-animate .reveal-1 { animation: textReveal 0.6s ease 0.4s both; }
+  .quote-animate .reveal-2 { animation: textReveal 0.6s ease 0.7s both; }
+  .quote-animate .reveal-3 { animation: textReveal 0.6s ease 0.9s both; }
+
+  /* Scanline subtle effect */
+  #scanlines {
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.03) 3px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0.4;
+  }
+
+  #hidden-msg {
+    position: fixed; top: 24px; left: 28px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--red);
+    z-index: 10;
+    opacity: 0;
+    animation: none;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="flash"></div>
+<div id="curtain"></div>
+<div id="scanlines"></div>
+
+<!-- LANGUAGE SCREEN -->
+<div id="lang-screen">
+  <div>
+    <div class="lang-title">MEMENTO MORI</div>
+    <div style="margin-top:10px;" class="lang-subtitle">Select your language // Dil Seçin // Elige tu idioma</div>
+  </div>
+  <div class="lang-options">
+    <button class="lang-btn" onclick="startApp('en')">ENGLISH</button>
+    <div class="lang-divider"></div>
+    <button class="lang-btn" onclick="startApp('tr')">TÜRKÇE</button>
+    <div class="lang-divider"></div>
+    <button class="lang-btn" onclick="startApp('es')">ESPAÑOL</button>
+  </div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:0.3em;color:#333;margin-top:20px;">
+    TAP ANYWHERE TO CONTINUE AFTER SELECTION
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div id="progress-bar"></div>
+  <div id="counter"></div>
+  <div id="hidden-msg">● RECORDING</div>
+
+  <div id="quote-container">
+    <div id="quote-line" class="reveal-0"></div>
+    <div id="quote-text" class="reveal-1"></div>
+    <div id="quote-author" class="reveal-2"></div>
+    <div id="quote-tag" class="reveal-3"></div>
+  </div>
+
+  <div id="controls">
+    <button class="ctrl-btn" onclick="prevQuote()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>PREV
+    </button>
+    <button class="ctrl-btn" onclick="nextQuote()">
+      NEXT<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:5px;margin-right:0"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <button class="ctrl-btn" onclick="takeScreenshot()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>CAPTURE
+    </button>
+    <button class="ctrl-btn" onclick="toggleFullscreen()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>FULLSCREEN
+    </button>
+  </div>
+</div>
+
+<script>
+// ── CURSOR ──
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+
+// ── QUOTES DATA ──
+const quotesData = {
+  en: [
+    { text: "The obstacle is the way.", author: "Marcus Aurelius", tag: "STOICISM" },
+    { text: "He who has a why to live can bear almost any how.", author: "Friedrich Nietzsche", tag: "EXISTENCE" },
+    { text: "We suffer more in imagination than in reality.", author: "Seneca", tag: "TRAGEDY" },
+    { text: "To live is to suffer; to survive is to find meaning in the suffering.", author: "Friedrich Nietzsche", tag: "PAIN" },
+    { text: "Death is nothing to us; when we exist, death is not present; when death is present, we no longer exist.", author: "Epicurus", tag: "EXISTENCE" },
+    { text: "The only way to deal with an unfree world is to become so absolutely free that your very existence is an act of rebellion.", author: "Albert Camus", tag: "FREEDOM" },
+    { text: "In the depth of winter, I finally learned that there was in me an invincible summer.", author: "Albert Camus", tag: "PAIN" },
+    { text: "Man is condemned to be free.", author: "Jean-Paul Sartre", tag: "EXISTENCE" },
+    { text: "Without music, life would be a mistake.", author: "Friedrich Nietzsche", tag: "LIFE" },
+    { text: "We are all alone, born alone, die alone.", author: "Hunter S. Thompson", tag: "SOLITUDE" },
+    { text: "The most courageous act is still to think for yourself. Aloud.", author: "Coco Chanel", tag: "EXISTENCE" },
+    { text: "Beware that you do not lose the substance by grasping at the shadow.", author: "Aesop", tag: "WISDOM" },
+    { text: "To be is to do.", author: "Socrates", tag: "EXISTENCE" },
+    { text: "I think therefore I am.", author: "René Descartes", tag: "EXISTENCE" },
+    { text: "Hell is other people.", author: "Jean-Paul Sartre", tag: "TRAGEDY" },
+    { text: "God is dead. God remains dead. And we have killed him.", author: "Friedrich Nietzsche", tag: "EXISTENCE" },
+    { text: "The unexamined life is not worth living.", author: "Socrates", tag: "EXISTENCE" },
+    { text: "One must imagine Sisyphus happy.", author: "Albert Camus", tag: "TRAGEDY" },
+    { text: "The two most important days in your life are the day you are born and the day you find out why.", author: "Mark Twain", tag: "EXISTENCE" },
+    { text: "Time is a flat circle.", author: "Friedrich Nietzsche", tag: "EXISTENCE" },
+    { text: "Everything is lost the moment it is gained.", author: "Arthur Schopenhauer", tag: "TRAGEDY" },
+    { text: "Life is a long preparation for something that never happens.", author: "W.B. Yeats", tag: "TRAGEDY" },
+    { text: "The wound is the place where the light enters you.", author: "Rumi", tag: "PAIN" },
+    { text: "Pain is inevitable. Suffering is optional.", author: "Haruki Murakami", tag: "PAIN" },
+    { text: "No great mind has ever existed without a touch of madness.", author: "Aristotle", tag: "EXISTENCE" },
+    { text: "The more I learn, the more I realize how much I don't know.", author: "Albert Einstein", tag: "WISDOM" },
+    { text: "Know thyself.", author: "Socrates", tag: "WISDOM" },
+    { text: "Whatever does not destroy me, makes me stronger.", author: "Friedrich Nietzsche", tag: "PAIN" },
+    { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", author: "Aristotle", tag: "EXISTENCE" },
+    { text: "The fear of death follows from the fear of life.", author: "Mark Twain", tag: "TRAGEDY" },
+    { text: "To love at all is to be vulnerable.", author: "C.S. Lewis", tag: "PAIN" },
+    { text: "Loneliness is the poverty of self; solitude is the richness of self.", author: "May Sarton", tag: "SOLITUDE" },
+    { text: "Life is suffering.", author: "Gautama Buddha", tag: "PAIN" },
+    { text: "Amor fati — love your fate.", author: "Friedrich Nietzsche", tag: "EXISTENCE" },
+    { text: "The more you know, the more you know you know nothing.", author: "Aristotle", tag: "WISDOM" },
+    { text: "To be fully alive is to be in pain.", author: "Fyodor Dostoevsky", tag: "PAIN" },
+    { text: "Man is the only animal that must be encouraged to live.", author: "Friedrich Nietzsche", tag: "TRAGEDY" },
+    { text: "It is not death that a man should fear, but he should fear never beginning to live.", author: "Marcus Aurelius", tag: "EXISTENCE" },
+    { text: "The tragedy of life is not that it ends so soon, but that we wait so long to begin it.", author: "W.M. Lewis", tag: "TRAGEDY" },
+    { text: "What is to give light must endure burning.", author: "Viktor Frankl", tag: "PAIN" },
+    { text: "Even the darkest night will end and the sun will rise.", author: "Victor Hugo", tag: "HOPE" },
+    { text: "There is but one truly serious philosophical problem, and that is suicide.", author: "Albert Camus", tag: "TRAGEDY" },
+    { text: "The absurd is born of the confrontation between the human need and the unreasonable silence of the world.", author: "Albert Camus", tag: "EXISTENCE" },
+    { text: "Life must be understood backwards; but it must be lived forwards.", author: "Søren Kierkegaard", tag: "EXISTENCE" },
+    { text: "Anxiety is the dizziness of freedom.", author: "Søren Kierkegaard", tag: "EXISTENCE" },
+    { text: "The most terrible poverty is loneliness.", author: "Mother Teresa", tag: "SOLITUDE" },
+    { text: "Where there is life, there is pain.", author: "Arthur Schopenhauer", tag: "PAIN" },
+    { text: "All is vanity and vexation of spirit.", author: "King Solomon", tag: "TRAGEDY" },
+    { text: "You are responsible for what you do not do.", author: "Jean-Paul Sartre", tag: "EXISTENCE" },
+    { text: "Reality is merely an illusion, albeit a very persistent one.", author: "Albert Einstein", tag: "EXISTENCE" },
+    { text: "The only escape from the miseries of life are art and love.", author: "Arthur Schopenhauer", tag: "TRAGEDY" },
+    { text: "Courage is resistance to fear, mastery of fear — not absence of fear.", author: "Mark Twain", tag: "EXISTENCE" },
+    { text: "Every man dies. Not every man really lives.", author: "William Wallace", tag: "EXISTENCE" },
+    { text: "The cradle rocks above an abyss, and common sense tells us that our existence is but a brief crack of light between two eternities of darkness.", author: "Vladimir Nabokov", tag: "EXISTENCE" },
+    { text: "We die twice — once when we stop breathing, and again when somebody says our name for the last time.", author: "Banksy", tag: "TRAGEDY" },
+    { text: "The purpose of life is not to be happy. It is to be useful, to be honorable, to be compassionate.", author: "Ralph Waldo Emerson", tag: "EXISTENCE" },
+    { text: "Do not go gentle into that good night.", author: "Dylan Thomas", tag: "TRAGEDY" },
+    { text: "Life is a tragedy when seen in close-up, but a comedy in long-shot.", author: "Charlie Chaplin", tag: "TRAGEDY" },
+    { text: "Stars cannot shine without darkness.", author: "D.H. Sidebottom", tag: "PAIN" },
+    { text: "The present moment always will have been.", author: "Epictetus", tag: "EXISTENCE" },
+    { text: "Memento mori — remember that you will die.", author: "Stoic Tradition", tag: "EXISTENCE" },
+    { text: "We are not human beings having a spiritual experience. We are spiritual beings having a human experience.", author: "Pierre Teilhard de Chardin", tag: "EXISTENCE" },
+    { text: "I would rather die on my feet than live on my knees.", author: "Emiliano Zapata", tag: "EXISTENCE" },
+    { text: "The struggle itself towards the heights is enough to fill a man's heart.", author: "Albert Camus", tag: "EXISTENCE" },
+    { text: "Happiness is not something ready-made. It comes from your own actions.", author: "Dalai Lama", tag: "EXISTENCE" },
+    { text: "The most authentic thing about us is our capacity to create, to overcome, to endure, to transform.", author: "Ben Okri", tag: "EXISTENCE" },
+    { text: "Sometimes even to live is an act of courage.", author: "Seneca", tag: "TRAGEDY" },
+    { text: "Existence precedes essence.", author: "Jean-Paul Sartre", tag: "EXISTENCE" },
+    { text: "The heaviest burden is an unlived life.", author: "C.G. Jung", tag: "TRAGEDY" },
+    { text: "Not all those who wander are lost.", author: "J.R.R. Tolkien", tag: "EXISTENCE" },
+    { text: "There is no sun without shadow, and it is essential to know the night.", author: "Albert Camus", tag: "TRAGEDY" },
+    { text: "You never know how strong you are until being strong is your only choice.", author: "Bob Marley", tag: "PAIN" },
+    { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein", tag: "PAIN" },
+    { text: "To live is the rarest thing in the world. Most people exist, that is all.", author: "Oscar Wilde", tag: "EXISTENCE" },
+    { text: "We are all broken. That's how the light gets in.", author: "Ernest Hemingway", tag: "PAIN" },
+    { text: "The truth is rarely pure and never simple.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "I am not what happened to me, I am what I choose to become.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Out of suffering have emerged the strongest souls; the most massive characters are seared with scars.", author: "Khalil Gibran", tag: "PAIN" },
+    { text: "It's not the years in your life that count. It's the life in your years.", author: "Abraham Lincoln", tag: "EXISTENCE" },
+    { text: "The self is not something ready-made, but something in continuous formation through choice of action.", author: "John Dewey", tag: "EXISTENCE" },
+    { text: "We are the universe experiencing itself.", author: "Alan Watts", tag: "EXISTENCE" },
+    { text: "Suffering is not a punishment, it is a purification.", author: "Paramahansa Yogananda", tag: "PAIN" },
+    { text: "Even if you are a minority of one, the truth is the truth.", author: "Mahatma Gandhi", tag: "WISDOM" },
+    { text: "Consciousness is a disease.", author: "Miguel de Unamuno", tag: "TRAGEDY" },
+    { text: "We are too weak to discover the truth by reason alone.", author: "St. Augustine", tag: "WISDOM" },
+    { text: "The most common form of despair is not being who you are.", author: "Søren Kierkegaard", tag: "EXISTENCE" },
+    { text: "I am large, I contain multitudes.", author: "Walt Whitman", tag: "EXISTENCE" },
+    { text: "Reality is that which, when you stop believing in it, doesn't go away.", author: "Philip K. Dick", tag: "EXISTENCE" },
+    { text: "Everything passes and everything perishes, and everything palls.", author: "Friedrich Nietzsche", tag: "TRAGEDY" },
+    { text: "He who fights with monsters might take care lest he thereby become a monster.", author: "Friedrich Nietzsche", tag: "WISDOM" },
+    { text: "The act of seeing is a form of dying.", author: "Paul Virilio", tag: "TRAGEDY" },
+    { text: "Without darkness, nothing comes to birth; without light, nothing flowers.", author: "May Sarton", tag: "PAIN" },
+    { text: "Silence is the language of God; all else is poor translation.", author: "Rumi", tag: "EXISTENCE" },
+    { text: "Either God exists or He doesn't. Either I believe or I don't.", author: "Blaise Pascal", tag: "EXISTENCE" },
+    { text: "Only the dead have seen the end of war.", author: "Plato", tag: "TRAGEDY" },
+    { text: "Man suffers most from the suffering he fears, but which never appears.", author: "Fyodor Dostoevsky", tag: "PAIN" },
+    { text: "Be kind, for everyone you meet is fighting a hard battle.", author: "Plato", tag: "PAIN" },
+    { text: "Until you make the unconscious conscious, it will direct your life and you will call it fate.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "The greatest illusion of this world is the illusion of separation.", author: "Albert Einstein", tag: "EXISTENCE" },
+    { text: "At the center of your being, you have the answer.", author: "Lao Tzu", tag: "WISDOM" },
+    { text: "Wisdom begins in wonder.", author: "Socrates", tag: "WISDOM" },
+    { text: "The price of anything is the amount of life you exchange for it.", author: "Henry David Thoreau", tag: "EXISTENCE" },
+    { text: "Not I, nor anyone else can travel that road for you. You must travel it by yourself.", author: "Walt Whitman", tag: "EXISTENCE" },
+    { text: "I took a deep breath and listened to the old brag of my heart: I am, I am, I am.", author: "Sylvia Plath", tag: "EXISTENCE" },
+    { text: "Dying is an art. Like everything else, I do it exceptionally well.", author: "Sylvia Plath", tag: "TRAGEDY" },
+    { text: "I am not afraid of storms, for I am learning how to sail my ship.", author: "Louisa May Alcott", tag: "PAIN" },
+    { text: "There is only one way to happiness and that is to cease worrying about things beyond our control.", author: "Epictetus", tag: "WISDOM" },
+    { text: "We do not need magic to transform our world. We carry all the power we need inside ourselves.", author: "J.K. Rowling", tag: "EXISTENCE" },
+    { text: "It is our choices that show what we truly are, far more than our abilities.", author: "J.K. Rowling", tag: "EXISTENCE" },
+    { text: "The world breaks everyone, and afterward, some are strong at the broken places.", author: "Ernest Hemingway", tag: "PAIN" },
+    { text: "To die will be an awfully big adventure.", author: "J.M. Barrie", tag: "TRAGEDY" },
+    { text: "All shall be well, and all shall be well, and all manner of thing shall be well.", author: "Julian of Norwich", tag: "HOPE" },
+    { text: "Wheresoever you go, go with all your heart.", author: "Confucius", tag: "EXISTENCE" },
+    { text: "Before you diagnose yourself with depression, first make sure you are not, in fact, surrounded by idiots.", author: "Sigmund Freud", tag: "WISDOM" },
+    { text: "The debt we owe to the play of imagination is incalculable.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "In individuals, insanity is rare; but in groups, parties, nations, it is the rule.", author: "Friedrich Nietzsche", tag: "TRAGEDY" },
+    { text: "Those who cannot remember the past are condemned to repeat it.", author: "George Santayana", tag: "WISDOM" },
+    { text: "There is only one good, knowledge, and one evil, ignorance.", author: "Socrates", tag: "WISDOM" },
+    { text: "Virtue is its own reward.", author: "Marcus Tullius Cicero", tag: "WISDOM" },
+    { text: "I have not failed. I've just found 10,000 ways that won't work.", author: "Thomas Edison", tag: "EXISTENCE" },
+    { text: "You only live once, but if you do it right, once is enough.", author: "Mae West", tag: "EXISTENCE" },
+    { text: "The most wasted of days is one without laughter.", author: "E.E. Cummings", tag: "LIFE" },
+    { text: "Give me liberty, or give me death.", author: "Patrick Henry", tag: "EXISTENCE" },
+    { text: "I am no bird; and no net ensnares me. I am a free human being with an independent will.", author: "Charlotte Brontë", tag: "FREEDOM" },
+    { text: "It matters not how strait the gate, how charged with punishments the scroll; I am the master of my fate, I am the captain of my soul.", author: "William Ernest Henley", tag: "EXISTENCE" },
+    { text: "The mass of men lead lives of quiet desperation.", author: "Henry David Thoreau", tag: "TRAGEDY" },
+    { text: "Most men lead lives of quiet desperation and go to the grave with the song still in them.", author: "Henry David Thoreau", tag: "TRAGEDY" },
+    { text: "Not all who wander are lost, but some are just searching for something they'll never find.", author: "Henry David Thoreau", tag: "SOLITUDE" },
+    { text: "I went to the woods because I wished to live deliberately.", author: "Henry David Thoreau", tag: "EXISTENCE" },
+    { text: "What is life? It is the flash of a firefly in the night.", author: "Crowfoot", tag: "TRAGEDY" },
+    { text: "It is a man's own mind, not his enemy or foe, that lures him to evil ways.", author: "Gautama Buddha", tag: "WISDOM" },
+    { text: "Three things cannot be long hidden: the sun, the moon, and the truth.", author: "Gautama Buddha", tag: "WISDOM" },
+    { text: "In the end, it's not the years in your life that count. It's the life in your years.", author: "Abraham Lincoln", tag: "EXISTENCE" },
+    { text: "Whatever you are, be a good one.", author: "Abraham Lincoln", tag: "WISDOM" },
+    { text: "Nearly all men can stand adversity, but if you want to test a man's character, give him power.", author: "Abraham Lincoln", tag: "WISDOM" },
+    { text: "When you reach the end of your rope, tie a knot in it and hang on.", author: "Franklin D. Roosevelt", tag: "PAIN" },
+    { text: "The only thing we have to fear is fear itself.", author: "Franklin D. Roosevelt", tag: "EXISTENCE" },
+    { text: "We are what we think. All that we are arises with our thoughts. With our thoughts, we make the world.", author: "Gautama Buddha", tag: "EXISTENCE" },
+    { text: "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.", author: "Gautama Buddha", tag: "WISDOM" },
+    { text: "When you realize how perfect everything is, you will tilt your head back and laugh at the sky.", author: "Gautama Buddha", tag: "EXISTENCE" },
+    { text: "The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.", author: "Albert Einstein", tag: "WISDOM" },
+    { text: "Imagination is more important than knowledge.", author: "Albert Einstein", tag: "WISDOM" },
+    { text: "Two things are infinite: the universe and human stupidity; and I'm not sure about the universe.", author: "Albert Einstein", tag: "TRAGEDY" },
+    { text: "A question that sometimes drives me hazy: am I or are the others crazy?", author: "Albert Einstein", tag: "EXISTENCE" },
+    { text: "The measure of intelligence is the ability to change.", author: "Albert Einstein", tag: "WISDOM" },
+    { text: "He who is not courageous enough to take risks will accomplish nothing in life.", author: "Muhammad Ali", tag: "EXISTENCE" },
+    { text: "Float like a butterfly, sting like a bee. The hands can't hit what the eyes can't see.", author: "Muhammad Ali", tag: "EXISTENCE" },
+    { text: "Service to others is the rent you pay for your room here on earth.", author: "Muhammad Ali", tag: "EXISTENCE" },
+    { text: "I hated every minute of training, but I said: don't quit. Suffer now and live the rest of your life as a champion.", author: "Muhammad Ali", tag: "PAIN" },
+    { text: "The goal of life is to make your heartbeat match the beat of the universe.", author: "Joseph Campbell", tag: "EXISTENCE" },
+    { text: "We must be willing to let go of the life we planned so as to have the life that is waiting for us.", author: "Joseph Campbell", tag: "EXISTENCE" },
+    { text: "Follow your bliss and the universe will open doors where there were only walls.", author: "Joseph Campbell", tag: "EXISTENCE" },
+    { text: "The cave you fear to enter holds the treasure you seek.", author: "Joseph Campbell", tag: "WISDOM" },
+    { text: "A hero ventures forth from the world of common day into a region of supernatural wonder.", author: "Joseph Campbell", tag: "EXISTENCE" },
+    { text: "Life is not a problem to be solved, but a reality to be experienced.", author: "Søren Kierkegaard", tag: "EXISTENCE" },
+    { text: "Boredom is the root of all evil — the despairing refusal to be oneself.", author: "Søren Kierkegaard", tag: "TRAGEDY" },
+    { text: "Don't explain your philosophy. Embody it.", author: "Epictetus", tag: "WISDOM" },
+    { text: "Wealth consists not in having great possessions, but in having few wants.", author: "Epictetus", tag: "WISDOM" },
+    { text: "Make the best use of what is in your power, and take the rest as it happens.", author: "Epictetus", tag: "WISDOM" },
+    { text: "First say to yourself what you would be; and then do what you have to do.", author: "Epictetus", tag: "WISDOM" },
+    { text: "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has.", author: "Epictetus", tag: "WISDOM" },
+    { text: "Any fool can be happy. It takes a man with real heart to make beauty out of the stuff that makes us weep.", author: "Clive Barker", tag: "PAIN" },
+    { text: "There is nothing either good or bad, but thinking makes it so.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "To thine own self be true.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "We know what we are, but know not what we may be.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "Cowards die many times before their deaths; the valiant never taste of death but once.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "All the world's a stage, and all the men and women merely players.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "The fault, dear Brutus, is not in our stars, but in ourselves.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "Life's but a walking shadow, a poor player that struts and frets his hour upon the stage, and then is heard no more.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "Hell is empty and all the devils are here.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "Good night, good night! Parting is such sweet sorrow.", author: "William Shakespeare", tag: "PAIN" },
+    { text: "If you prick us, do we not bleed?", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "Brevity is the soul of wit.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "We are such stuff as dreams are made on, and our little life is rounded with a sleep.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "The evil that men do lives after them; the good is oft interred with their bones.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "Something is rotten in the state of Denmark.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "A man can die but once.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "To be, or not to be — that is the question.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "There are more things in heaven and earth, Horatio, than are dreamt of in your philosophy.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "This above all: to thine own self be true.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "What a piece of work is man! How noble in reason, how infinite in faculty!", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "The lady doth protest too much, methinks.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "Tomorrow, and tomorrow, and tomorrow, creeps in this petty pace from day to day.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "Out, out, brief candle! Life's but a walking shadow.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "The robbed that smiles, steals something from the thief.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "Nothing will come of nothing.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "No legacy is so rich as honesty.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "Love all, trust a few, do wrong to none.", author: "William Shakespeare", tag: "WISDOM" },
+    { text: "The wheel is come full circle.", author: "William Shakespeare", tag: "TRAGEDY" },
+    { text: "What's in a name? That which we call a rose by any other name would smell as sweet.", author: "William Shakespeare", tag: "EXISTENCE" },
+    { text: "There is nothing permanent except change.", author: "Heraclitus", tag: "EXISTENCE" },
+    { text: "You cannot step into the same river twice.", author: "Heraclitus", tag: "EXISTENCE" },
+    { text: "Character is destiny.", author: "Heraclitus", tag: "EXISTENCE" },
+    { text: "War is the father of all things.", author: "Heraclitus", tag: "TRAGEDY" },
+    { text: "The eyes are more exact witnesses than the ears.", author: "Heraclitus", tag: "WISDOM" },
+    { text: "The way up and the way down are one and the same.", author: "Heraclitus", tag: "EXISTENCE" },
+    { text: "Hidden harmony is better than obvious harmony.", author: "Heraclitus", tag: "WISDOM" },
+    { text: "Education is the kindling of a flame, not the filling of a vessel.", author: "Socrates", tag: "WISDOM" },
+    { text: "I know that I know nothing.", author: "Socrates", tag: "WISDOM" },
+    { text: "The secret of change is to focus all your energy not on fighting the old, but on building the new.", author: "Socrates", tag: "WISDOM" },
+    { text: "To find yourself, think for yourself.", author: "Socrates", tag: "WISDOM" },
+    { text: "Strong minds discuss ideas, average minds discuss events, weak minds discuss people.", author: "Socrates", tag: "WISDOM" },
+    { text: "One who conquers himself is greater than another who conquers a thousand times a thousand men.", author: "Gautama Buddha", tag: "WISDOM" },
+    { text: "You yourself, as much as anybody in the entire universe, deserve your love and affection.", author: "Gautama Buddha", tag: "EXISTENCE" },
+    { text: "Holding on to anger is like grasping a hot coal with the intent of throwing it at someone else; you are the one who gets burned.", author: "Gautama Buddha", tag: "WISDOM" },
+    { text: "An idea that is not dangerous is unworthy of being called an idea at all.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "I can resist everything except temptation.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "We are all in the gutter, but some of us are looking at the stars.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "Always forgive your enemies; nothing annoys them so much.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "Be yourself; everyone else is already taken.", author: "Oscar Wilde", tag: "EXISTENCE" },
+    { text: "There are only two tragedies in life: one is not getting what one wants, and the other is getting it.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "The books that the world calls immoral are books that show the world its own shame.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "The only difference between a caprice and a lifelong passion is that the caprice lasts a little longer.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "Man is least himself when he talks in his own person. Give him a mask, and he will tell you the truth.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "Experience is simply the name we give our mistakes.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "I don't want to go to heaven. None of my friends are there.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "Death must be so beautiful. To lie in the soft brown earth, with the grasses waving above one's head.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "The old believe everything, the middle-aged suspect everything, the young know everything.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "Women are made to be loved, not understood.", author: "Oscar Wilde", tag: "EXISTENCE" },
+    { text: "A cynic is a man who knows the price of everything and the value of nothing.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "I am not young enough to know everything.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "The only way to get rid of a temptation is to yield to it.", author: "Oscar Wilde", tag: "EXISTENCE" },
+    { text: "Nowadays people know the price of everything and the value of nothing.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "One must have a heart of stone to read the death of Little Nell without laughing.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "The basis of optimism is sheer terror.", author: "Oscar Wilde", tag: "TRAGEDY" },
+    { text: "The mystery of love is greater than the mystery of death.", author: "Oscar Wilde", tag: "EXISTENCE" },
+    { text: "Every saint has a past, and every sinner has a future.", author: "Oscar Wilde", tag: "EXISTENCE" },
+    { text: "Suffering is one very long moment. We cannot divide it by seasons.", author: "Oscar Wilde", tag: "PAIN" },
+    { text: "Hearts are made to be broken.", author: "Oscar Wilde", tag: "PAIN" },
+    { text: "If you want to tell people the truth, make them laugh, otherwise they'll kill you.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "To expect the unexpected shows a thoroughly modern intellect.", author: "Oscar Wilde", tag: "WISDOM" },
+    { text: "Conformity is the jailer of freedom and the enemy of growth.", author: "John F. Kennedy", tag: "FREEDOM" },
+    { text: "Do not pray for easy lives. Pray to be stronger men.", author: "John F. Kennedy", tag: "PAIN" },
+    { text: "One person can make a difference, and everyone should try.", author: "John F. Kennedy", tag: "EXISTENCE" },
+    { text: "We choose to go to the moon not because it is easy, but because it is hard.", author: "John F. Kennedy", tag: "EXISTENCE" },
+    { text: "If not us, who? If not now, when?", author: "John F. Kennedy", tag: "EXISTENCE" },
+    { text: "I am an invisible man. No, I am not a spook like those who haunted Edgar Allan Poe.", author: "Ralph Ellison", tag: "EXISTENCE" },
+    { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt", tag: "EXISTENCE" },
+    { text: "You gain strength, courage, and confidence by every experience in which you really stop to look fear in the face.", author: "Eleanor Roosevelt", tag: "PAIN" },
+    { text: "No one can make you feel inferior without your consent.", author: "Eleanor Roosevelt", tag: "WISDOM" },
+    { text: "Do one thing every day that scares you.", author: "Eleanor Roosevelt", tag: "EXISTENCE" },
+    { text: "The purpose of life is to live it, to taste experience to the utmost.", author: "Eleanor Roosevelt", tag: "EXISTENCE" },
+    { text: "Darkness cannot drive out darkness; only light can do that.", author: "Martin Luther King Jr.", tag: "PAIN" },
+    { text: "Our lives begin to end the day we become silent about things that matter.", author: "Martin Luther King Jr.", tag: "TRAGEDY" },
+    { text: "Faith is taking the first step even when you don't see the whole staircase.", author: "Martin Luther King Jr.", tag: "EXISTENCE" },
+    { text: "The time is always right to do what is right.", author: "Martin Luther King Jr.", tag: "WISDOM" },
+    { text: "If you can't fly then run, if you can't run then walk, if you can't walk then crawl.", author: "Martin Luther King Jr.", tag: "PAIN" },
+    { text: "We must accept finite disappointment, but never lose infinite hope.", author: "Martin Luther King Jr.", tag: "HOPE" },
+    { text: "The ultimate measure of a man is not where he stands in moments of comfort and convenience.", author: "Martin Luther King Jr.", tag: "EXISTENCE" },
+    { text: "Freedom is never voluntarily given by the oppressor; it must be demanded by the oppressed.", author: "Martin Luther King Jr.", tag: "FREEDOM" },
+    { text: "In the end, we will remember not the words of our enemies, but the silence of our friends.", author: "Martin Luther King Jr.", tag: "TRAGEDY" },
+    { text: "The arc of the moral universe is long, but it bends toward justice.", author: "Martin Luther King Jr.", tag: "HOPE" },
+    { text: "An eye for an eye only ends up making the whole world blind.", author: "Mahatma Gandhi", tag: "WISDOM" },
+    { text: "Be the change you wish to see in the world.", author: "Mahatma Gandhi", tag: "EXISTENCE" },
+    { text: "First they ignore you, then they laugh at you, then they fight you, then you win.", author: "Mahatma Gandhi", tag: "EXISTENCE" },
+    { text: "The weak can never forgive. Forgiveness is the attribute of the strong.", author: "Mahatma Gandhi", tag: "WISDOM" },
+    { text: "Live as if you were to die tomorrow. Learn as if you were to live forever.", author: "Mahatma Gandhi", tag: "EXISTENCE" },
+    { text: "Happiness is when what you think, what you say, and what you do are in harmony.", author: "Mahatma Gandhi", tag: "WISDOM" },
+    { text: "A man is but the product of his thoughts. What he thinks, he becomes.", author: "Mahatma Gandhi", tag: "EXISTENCE" },
+    { text: "Where there is love there is life.", author: "Mahatma Gandhi", tag: "EXISTENCE" },
+    { text: "The best way to find yourself is to lose yourself in the service of others.", author: "Mahatma Gandhi", tag: "WISDOM" },
+    { text: "If I had no sense of humor, I would long ago have committed suicide.", author: "Mahatma Gandhi", tag: "TRAGEDY" },
+    { text: "Among those whom I like or admire, I can find no common denominator, but among those whom I love, I can: all of them make me laugh.", author: "W.H. Auden", tag: "EXISTENCE" },
+    { text: "We are not permitted to choose the frame of our destiny. But what we put into it is ours.", author: "Dag Hammarskjöld", tag: "EXISTENCE" },
+    { text: "The longest journey of any person is the journey inward.", author: "Dag Hammarskjöld", tag: "EXISTENCE" },
+    { text: "Forgiveness is the fragrance that the violet sheds on the heel that has crushed it.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "It's not the size of the dog in the fight, it's the size of the fight in the dog.", author: "Mark Twain", tag: "PAIN" },
+    { text: "The two most important days in your life are the day you are born and the day you find out why.", author: "Mark Twain", tag: "EXISTENCE" },
+    { text: "Never put off till tomorrow what you can do the day after tomorrow.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "If you tell the truth, you don't have to remember anything.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "Sanity and happiness are an impossible combination.", author: "Mark Twain", tag: "TRAGEDY" },
+    { text: "The secret of getting ahead is getting started.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "If you don't read the newspaper, you're uninformed. If you do read it, you're misinformed.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "A man's character may be learned from the adjectives which he habitually uses in conversation.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "The human race has one really effective weapon, and that is laughter.", author: "Mark Twain", tag: "EXISTENCE" },
+    { text: "Against the assault of laughter, nothing can stand.", author: "Mark Twain", tag: "EXISTENCE" },
+    { text: "Wrinkles should merely indicate where smiles have been.", author: "Mark Twain", tag: "EXISTENCE" },
+    { text: "Truth is stranger than fiction, but it is because fiction is obliged to stick to possibilities.", author: "Mark Twain", tag: "WISDOM" },
+    { text: "I have lived through much, and now I think I have found what is needed for happiness. A quiet secluded life in the country, with the possibility of being useful to people to whom it is easy to do good.", author: "Leo Tolstoy", tag: "EXISTENCE" },
+    { text: "Everyone thinks of changing the world, but no one thinks of changing himself.", author: "Leo Tolstoy", tag: "WISDOM" },
+    { text: "All great literature is one of two stories; a man goes on a journey or a stranger comes to town.", author: "Leo Tolstoy", tag: "EXISTENCE" },
+    { text: "The sole meaning of life is to serve humanity.", author: "Leo Tolstoy", tag: "EXISTENCE" },
+    { text: "All happy families are alike; each unhappy family is unhappy in its own way.", author: "Leo Tolstoy", tag: "TRAGEDY" },
+    { text: "There is no greatness where there is no simplicity, goodness, and truth.", author: "Leo Tolstoy", tag: "WISDOM" },
+    { text: "The two most powerful warriors are patience and time.", author: "Leo Tolstoy", tag: "WISDOM" },
+    { text: "A man is not idle because he is absorbed in thought. There is a visible labor and there is an invisible labor.", author: "Victor Hugo", tag: "WISDOM" },
+    { text: "Not being heard is no reason for silence.", author: "Victor Hugo", tag: "EXISTENCE" },
+    { text: "He who opens a school door, closes a prison.", author: "Victor Hugo", tag: "WISDOM" },
+    { text: "Short as life is, we make it still shorter by the careless waste of time.", author: "Victor Hugo", tag: "TRAGEDY" },
+    { text: "Laughter is the sun that drives winter from the human face.", author: "Victor Hugo", tag: "EXISTENCE" },
+    { text: "There is always more misery among the lower classes than there is humanity in the higher.", author: "Victor Hugo", tag: "TRAGEDY" },
+    { text: "To love another person is to see the face of God.", author: "Victor Hugo", tag: "EXISTENCE" },
+    { text: "There is one thing stronger than all the armies in the world, and that is an idea whose time has come.", author: "Victor Hugo", tag: "WISDOM" },
+    { text: "Man is not the creature of circumstances. Circumstances are the creatures of men.", author: "Benjamin Disraeli", tag: "EXISTENCE" },
+    { text: "Life is too short to be little.", author: "Benjamin Disraeli", tag: "EXISTENCE" },
+    { text: "A great man is he who has not lost the heart of a child.", author: "Mencius", tag: "WISDOM" },
+    { text: "Tell me, what is it you plan to do with your one wild and precious life?", author: "Mary Oliver", tag: "EXISTENCE" },
+    { text: "You do not have to be good. You do not have to walk on your knees for a hundred miles through the desert repenting.", author: "Mary Oliver", tag: "EXISTENCE" },
+    { text: "Instructions for living a life: Pay attention. Be astonished. Tell about it.", author: "Mary Oliver", tag: "WISDOM" },
+    { text: "The language of friendship is not words but meanings.", author: "Henry David Thoreau", tag: "EXISTENCE" },
+    { text: "Live in the sunshine, swim the sea, drink the wild air.", author: "Ralph Waldo Emerson", tag: "EXISTENCE" },
+    { text: "Do not go where the path may lead; go instead where there is no path and leave a trail.", author: "Ralph Waldo Emerson", tag: "EXISTENCE" },
+    { text: "What lies behind us and what lies before us are tiny matters compared to what lies within us.", author: "Ralph Waldo Emerson", tag: "WISDOM" },
+    { text: "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment.", author: "Ralph Waldo Emerson", tag: "EXISTENCE" },
+    { text: "For every minute you are angry you lose sixty seconds of happiness.", author: "Ralph Waldo Emerson", tag: "WISDOM" },
+    { text: "It is not the length of life, but the depth of life.", author: "Ralph Waldo Emerson", tag: "EXISTENCE" },
+    { text: "The only person you are destined to become is the person you decide to be.", author: "Ralph Waldo Emerson", tag: "EXISTENCE" },
+    { text: "Finish each day and be done with it. You have done what you could.", author: "Ralph Waldo Emerson", tag: "WISDOM" },
+    { text: "Nothing is at last sacred but the integrity of your own mind.", author: "Ralph Waldo Emerson", tag: "WISDOM" },
+    { text: "A foolish consistency is the hobgoblin of little minds.", author: "Ralph Waldo Emerson", tag: "WISDOM" },
+    { text: "The creation of something new is not accomplished by the intellect but by the play instinct.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Your visions will become clear only when you can look into your own heart.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "Show me a sane man and I will cure him for you.", author: "C.G. Jung", tag: "TRAGEDY" },
+    { text: "Everything that irritates us about others can lead us to an understanding of ourselves.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "The pendulum of the mind oscillates between sense and nonsense, not between right and wrong.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "Life really does begin at forty. Up until then, you are just doing research.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Knowing your own darkness is the best method for dealing with the darknesses of other people.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "Man's task is to become conscious of the contents that press upward from the unconscious.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Who looks outside, dreams; who looks inside, awakes.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "The first half of life is devoted to forming a healthy ego, the second half is going inward and letting go of it.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "There is no coming to consciousness without pain.", author: "C.G. Jung", tag: "PAIN" },
+    { text: "The privilege of a lifetime is to become who you truly are.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Loneliness does not come from having no people around, but from being unable to communicate the things that seem important to oneself.", author: "C.G. Jung", tag: "SOLITUDE" },
+    { text: "Where love rules, there is no will to power; and where power predominates, there love is lacking.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "The shoe that fits one person pinches another; there is no recipe for living that suits all cases.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "As far as we can discern, the sole purpose of human existence is to kindle a light in the darkness of mere being.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "The meeting of two personalities is like the contact of two chemical substances: if there is any reaction, both are transformed.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "I am not what happened to me, I am what I choose to become.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "If a man knows more than others, he becomes lonely.", author: "C.G. Jung", tag: "SOLITUDE" },
+    { text: "I have always felt that doubt was the beginning of wisdom, and the fear of God was the beginning of religion, not wisdom.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "The most terrifying thing is to accept oneself completely.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Thinking is difficult, that's why most people judge.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "We cannot change anything unless we accept it.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "The great solution is to keep it simple, meet people where they are, and light the candle.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "A dream is a small hidden door in the deepest and most intimate sanctum of the soul.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Only when I stopped searching outside of myself did I find the answer.", author: "C.G. Jung", tag: "WISDOM" },
+    { text: "The meaning of my existence is that life has addressed a question to me.", author: "C.G. Jung", tag: "EXISTENCE" },
+    { text: "Silence is sometimes the best answer.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "If you think you are too small to make a difference, try sleeping with a mosquito.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Remember that not getting what you want is sometimes a wonderful stroke of luck.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "If you want others to be happy, practice compassion. If you want to be happy, practice compassion.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "The purpose of our lives is to be happy.", author: "Dalai Lama XIV", tag: "EXISTENCE" },
+    { text: "An open heart is an open mind.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "My religion is very simple. My religion is kindness.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Be kind whenever possible. It is always possible.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "The roots of all goodness lie in the soil of appreciation for goodness.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Give the ones you love wings to fly, roots to come back, and reasons to stay.", author: "Dalai Lama XIV", tag: "EXISTENCE" },
+    { text: "People take different roads seeking fulfillment and happiness. Just because they're not on your road doesn't mean they've gotten lost.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Our prime purpose in this life is to help others. And if you can't help them, at least don't hurt them.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Anger is the ultimate destroyer of your own peace of mind.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Sleep is the best meditation.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Judge your success by what you had to give up in order to get it.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Hard times build determination and inner strength. Through them we can also come to appreciate the uselessness of anger.", author: "Dalai Lama XIV", tag: "PAIN" },
+    { text: "It is under the greatest adversity that there exists the greatest potential for doing good.", author: "Dalai Lama XIV", tag: "PAIN" },
+    { text: "The way to overcome negative thoughts and destructive emotions is to develop opposing, positive emotions that are stronger and more powerful.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "The more you are motivated by love, the more fearless and free your action will be.", author: "Dalai Lama XIV", tag: "EXISTENCE" },
+    { text: "In order to carry a positive action we must develop here a positive vision.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "In the practice of tolerance, one's enemy is the best teacher.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "World peace must develop from inner peace.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "We can never obtain peace in the outer world until we make peace with ourselves.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "If you have a particular faith or religion, that is good. But you can survive without it.", author: "Dalai Lama XIV", tag: "EXISTENCE" },
+    { text: "Choose to be optimistic, it feels better.", author: "Dalai Lama XIV", tag: "WISDOM" },
+    { text: "Not everyone will understand your journey. That's fine. It's not their journey to make sense of. It's yours.", author: "Zero Dean", tag: "EXISTENCE" },
+    { text: "The only limits in your life are those that you set yourself.", author: "Celestine Chua", tag: "EXISTENCE" },
+    { text: "There is no charm equal to tenderness of heart.", author: "Jane Austen", tag: "EXISTENCE" },
+    { text: "I declare after all there is no enjoyment like reading!", author: "Jane Austen", tag: "EXISTENCE" },
+    { text: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.", author: "Jane Austen", tag: "TRAGEDY" },
+    { text: "Vanity and pride are different things, though the words are often used synonymously.", author: "Jane Austen", tag: "WISDOM" },
+    { text: "There are few people whom I really love, and still fewer of whom I think well.", author: "Jane Austen", tag: "SOLITUDE" },
+    { text: "A lady's imagination is very rapid; it jumps from admiration to love, from love to matrimony, in a moment.", author: "Jane Austen", tag: "WISDOM" },
+    { text: "The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.", author: "Jane Austen", tag: "WISDOM" },
+    { text: "Blessed is he who expects nothing, for he shall never be disappointed.", author: "Alexander Pope", tag: "WISDOM" },
+    { text: "To err is human; to forgive, divine.", author: "Alexander Pope", tag: "WISDOM" },
+    { text: "A little learning is a dangerous thing.", author: "Alexander Pope", tag: "WISDOM" },
+    { text: "Hope springs eternal in the human breast.", author: "Alexander Pope", tag: "HOPE" },
+    { text: "What is now proved was once only imagined.", author: "William Blake", tag: "WISDOM" },
+    { text: "No bird soars too high if he soars with his own wings.", author: "William Blake", tag: "EXISTENCE" },
+    { text: "The road of excess leads to the palace of wisdom.", author: "William Blake", tag: "WISDOM" },
+    { text: "To see a World in a Grain of Sand, and a Heaven in a Wild Flower.", author: "William Blake", tag: "EXISTENCE" },
+    { text: "You never know how much is enough unless you know how much is more than enough.", author: "William Blake", tag: "WISDOM" },
+    { text: "Expect poison from the standing water.", author: "William Blake", tag: "WISDOM" },
+    { text: "It is easier to forgive an enemy than to forgive a friend.", author: "William Blake", tag: "TRAGEDY" },
+    { text: "Man was made for joy and woe; and when this we rightly know, through the world we safely go.", author: "William Blake", tag: "PAIN" },
+    { text: "You cannot fly like an eagle with the wings of a wren.", author: "William Henry Hudson", tag: "WISDOM" },
+    { text: "Death is not extinguishing the light; it is putting out the lamp because dawn has come.", author: "Rabindranath Tagore", tag: "TRAGEDY" },
+    { text: "You can't cross the sea merely by standing and staring at the water.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "The butterfly counts not months but moments, and has time enough.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "Let your life lightly dance on the edges of time like dew on the tip of a leaf.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "Clouds come floating into my life from other days no longer to shed rain or usher storm but to give colour to my sunset sky.", author: "Rabindranath Tagore", tag: "TRAGEDY" },
+    { text: "The one who plants trees, knowing that he will never sit in their shade, has at least started to understand the meaning of life.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "Faith is the bird that feels the light when the dawn is still dark.", author: "Rabindranath Tagore", tag: "HOPE" },
+    { text: "Depth of friendship does not depend on length of acquaintance.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "The flower which is single need not envy the thorns that are numerous.", author: "Rabindranath Tagore", tag: "WISDOM" },
+    { text: "Man goes into the noisy crowd to drown his own clamour of silence.", author: "Rabindranath Tagore", tag: "SOLITUDE" },
+    { text: "I slept and dreamt that life was joy. I awoke and saw that life was service. I acted and behold, service was joy.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "If you cry because the sun has gone out of your life, your tears will prevent you from seeing the stars.", author: "Rabindranath Tagore", tag: "PAIN" },
+    { text: "We live in the world when we love it.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "Age considers; youth ventures.", author: "Rabindranath Tagore", tag: "WISDOM" },
+    { text: "The small wisdom is like water in a glass: clear, transparent, pure. The great wisdom is like the water in the sea: dark, mysterious, impenetrable.", author: "Rabindranath Tagore", tag: "WISDOM" },
+    { text: "Do not say, 'It is morning,' and dismiss it with a name of yesterday. See it for the first time as a newborn child that has no name.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "God waits to win back his own flowers as gifts from man's hands.", author: "Rabindranath Tagore", tag: "EXISTENCE" },
+    { text: "Everything has beauty, but not everyone sees it.", author: "Confucius", tag: "WISDOM" },
+    { text: "The man who asks a question is a fool for a minute, the man who does not ask is a fool for life.", author: "Confucius", tag: "WISDOM" },
+    { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius", tag: "WISDOM" },
+    { text: "Our greatest glory is not in never falling, but in rising every time we fall.", author: "Confucius", tag: "PAIN" },
+    { text: "When it is obvious that the goals cannot be reached, don't adjust the goals, adjust the action steps.", author: "Confucius", tag: "WISDOM" },
+    { text: "Real knowledge is to know the extent of one's ignorance.", author: "Confucius", tag: "WISDOM" },
+    { text: "He who learns but does not think, is lost. He who thinks but does not learn is in great danger.", author: "Confucius", tag: "WISDOM" },
+    { text: "Before you embark on a journey of revenge, dig two graves.", author: "Confucius", tag: "WISDOM" },
+    { text: "The superior man is modest in his speech, but exceeds in his actions.", author: "Confucius", tag: "WISDOM" },
+    { text: "Life is really simple, but we insist on making it complicated.", author: "Confucius", tag: "WISDOM" },
+    { text: "Choose a job you love, and you will never have to work a day in your life.", author: "Confucius", tag: "EXISTENCE" },
+    { text: "To know what you know and what you do not know, that is true knowledge.", author: "Confucius", tag: "WISDOM" },
+    { text: "The man of virtue, wishing to be established himself, seeks also to establish others.", author: "Confucius", tag: "WISDOM" },
+    { text: "I hear and I forget. I see and I remember. I do and I understand.", author: "Confucius", tag: "WISDOM" },
+    { text: "Attack the evil that is within yourself, rather than attacking the evil that is in others.", author: "Confucius", tag: "WISDOM" },
+    { text: "He who knows all the answers has not been asked all the questions.", author: "Confucius", tag: "WISDOM" },
+    { text: "The hardest thing of all is to find a black cat in a dark room, especially if there is no cat.", author: "Confucius", tag: "WISDOM" },
+    { text: "Hold faithfulness and sincerity as first principles.", author: "Confucius", tag: "WISDOM" },
+    { text: "Virtue is not left to stand alone. He who practices it will have neighbors.", author: "Confucius", tag: "WISDOM" },
+    { text: "One joy shatters a hundred griefs.", author: "Confucius", tag: "PAIN" },
+    { text: "The superior man is satisfied and composed; the mean man is always full of distress.", author: "Confucius", tag: "WISDOM" },
+    { text: "If you make a mistake and do not correct it, this is called a mistake.", author: "Confucius", tag: "WISDOM" },
+    { text: "A man who has committed a mistake and doesn't correct it is committing another mistake.", author: "Confucius", tag: "WISDOM" },
+    { text: "By three methods we may learn wisdom: First, by reflection, which is noblest; second, by imitation, which is easiest; and third by experience, which is the bitterest.", author: "Confucius", tag: "WISDOM" },
+    { text: "To see what is right, and not to do it, is want of courage.", author: "Confucius", tag: "WISDOM" },
+    { text: "When you know a thing, to hold that you know it; and when you do not know a thing, to allow that you do not know it — this is knowledge.", author: "Confucius", tag: "WISDOM" },
+    { text: "The strength of a nation derives from the integrity of the home.", author: "Confucius", tag: "WISDOM" },
+    { text: "In a country well governed, poverty is something to be ashamed of. In a country badly governed, wealth is something to be ashamed of.", author: "Confucius", tag: "WISDOM" },
+    { text: "Gravity is only the bark of wisdom's tree, but it preserves it.", author: "Confucius", tag: "WISDOM" },
+    { text: "When anger rises, think of the consequences.", author: "Confucius", tag: "WISDOM" },
+    { text: "The gem cannot be polished without friction, nor man perfected without trials.", author: "Confucius", tag: "PAIN" }
+  ],
+  tr: [
+    { text: "Engel, yoldur.", author: "Marcus Aurelius", tag: "STOİZM" },
+    { text: "Yaşamak için bir nedeni olan neredeyse her şeye katlanabilir.", author: "Friedrich Nietzsche", tag: "VAROLUŞ" },
+    { text: "Hayal gücümüzde gerçekten daha çok acı çekeriz.", author: "Seneca", tag: "TRAJEDY" },
+    { text: "Yaşamak acı çekmektir; hayatta kalmak bu acıda anlam bulmaktır.", author: "Friedrich Nietzsche", tag: "ACI" },
+    { text: "Ölüm bizim için hiçbir şeydir; var olduğumuzda ölüm yoktur; ölüm olduğunda biz artık yokuz.", author: "Epicurus", tag: "VAROLUŞ" },
+    { text: "Özgür olmayan bir dünyayla başa çıkmanın tek yolu, varlığının bir isyan eylemi olacağı kadar özgür olmaktır.", author: "Albert Camus", tag: "ÖZGÜRLÜK" },
+    { text: "Kışın derinliğinde nihayet içimde yenilmez bir yaz olduğunu öğrendim.", author: "Albert Camus", tag: "ACI" },
+    { text: "İnsan özgür olmaya mahkûmdur.", author: "Jean-Paul Sartre", tag: "VAROLUŞ" },
+    { text: "Müzik olmadan yaşam bir hata olurdu.", author: "Friedrich Nietzsche", tag: "YAŞAM" },
+    { text: "Hepimiz yalnız doğduk, yalnız ölüyoruz.", author: "Hunter S. Thompson", tag: "YALNIZLIK" },
+    { text: "En cesur eylem hâlâ kendi başına düşünmektir.", author: "Coco Chanel", tag: "VAROLUŞ" },
+    { text: "Gölgeyi kavrarken özü kaybetmemeye dikkat et.", author: "Aesop", tag: "BİLGELİK" },
+    { text: "Olmak eylemektir.", author: "Sokrates", tag: "VAROLUŞ" },
+    { text: "Düşünüyorum, öyleyse varım.", author: "René Descartes", tag: "VAROLUŞ" },
+    { text: "Cehennem, başkalarıdır.", author: "Jean-Paul Sartre", tag: "TRAJEDY" },
+    { text: "Tanrı öldü. Tanrı ölü kalmaya devam ediyor. Ve onu biz öldürdük.", author: "Friedrich Nietzsche", tag: "VAROLUŞ" },
+    { text: "Sorgulanmayan bir hayat yaşanmaya değmez.", author: "Sokrates", tag: "VAROLUŞ" },
+    { text: "Sisyphos'u mutlu hayal etmek gerekir.", author: "Albert Camus", tag: "TRAJEDY" },
+    { text: "Her şey kazanıldığı anda kaybolur.", author: "Arthur Schopenhauer", tag: "TRAJEDY" },
+    { text: "Hayat, hiç gerçekleşmeyen bir şeyin uzun bir hazırlığıdır.", author: "W.B. Yeats", tag: "TRAJEDY" },
+    { text: "Yara, ışığın içine girdiği yerdir.", author: "Rumi", tag: "ACI" },
+    { text: "Acı kaçınılmazdır. Acı çekmek isteğe bağlıdır.", author: "Haruki Murakami", tag: "ACI" },
+    { text: "Hiçbir büyük zihin bir parça delilik olmadan var olmamıştır.", author: "Aristoteles", tag: "VAROLUŞ" },
+    { text: "Ne kadar çok öğrenirsem, ne kadar az bildiğimi o kadar çok fark ediyorum.", author: "Albert Einstein", tag: "BİLGELİK" },
+    { text: "Kendini bil.", author: "Sokrates", tag: "BİLGELİK" },
+    { text: "Beni yok etmeyen şey beni güçlendirir.", author: "Friedrich Nietzsche", tag: "ACI" },
+    { text: "Ölüm korkusu hayat korkusundan gelir.", author: "Mark Twain", tag: "TRAJEDY" },
+    { text: "Sevmek, savunmasız olmaktır.", author: "C.S. Lewis", tag: "ACI" },
+    { text: "Yalnızlık benliğin yoksulluğudur; yalnız olmak benliğin zenginliğidir.", author: "May Sarton", tag: "YALNIZLIK" },
+    { text: "Hayat acıdır.", author: "Gautama Buddha", tag: "ACI" },
+    { text: "Amor fati — kaderini sev.", author: "Friedrich Nietzsche", tag: "VAROLUŞ" },
+    { text: "Tamamen yaşamak acı içinde olmaktır.", author: "Fyodor Dostoyevski", tag: "ACI" },
+    { text: "İnsan, yaşamaya cesaretlendirilmesi gereken tek hayvandır.", author: "Friedrich Nietzsche", tag: "TRAJEDY" },
+    { text: "İnsanın korkması gereken ölüm değil, hiç yaşamamaktır.", author: "Marcus Aurelius", tag: "VAROLUŞ" },
+    { text: "Hayatın trajedisi çok çabuk bitmesi değil, başlamak için çok uzun beklememizdir.", author: "W.M. Lewis", tag: "TRAJEDY" },
+    { text: "Işık vermek için yanmayı göze almak gerekir.", author: "Viktor Frankl", tag: "ACI" },
+    { text: "En karanlık gece bile sona erecek ve güneş doğacak.", author: "Victor Hugo", tag: "UMUT" },
+    { text: "Gerçekten ciddi olan tek felsefi sorun intihar meselesidir.", author: "Albert Camus", tag: "TRAJEDY" },
+    { text: "Saçma olan, insanın ihtiyacı ile dünyanın mantıksız sessizliği arasındaki çatışmadan doğar.", author: "Albert Camus", tag: "VAROLUŞ" },
+    { text: "Hayat geriye doğru anlaşılmalı ama ileriye doğru yaşanmalıdır.", author: "Søren Kierkegaard", tag: "VAROLUŞ" },
+    { text: "Kaygı, özgürlüğün baş dönmesidir.", author: "Søren Kierkegaard", tag: "VAROLUŞ" },
+    { text: "En yaygın yoksulluk biçimi yalnızlıktır.", author: "Teresa Ana", tag: "YALNIZLIK" },
+    { text: "Hayat nerede varsa, acı da oradadır.", author: "Arthur Schopenhauer", tag: "ACI" },
+    { text: "Her şey boşluk ve ruhun sıkıntısıdır.", author: "Kral Süleyman", tag: "TRAJEDY" },
+    { text: "Yapmadığınız şeyden de siz sorumlusunuz.", author: "Jean-Paul Sartre", tag: "VAROLUŞ" },
+    { text: "Gerçeklik bir yanılsamadır; ama çok ısrarcı bir yanılsamadır.", author: "Albert Einstein", tag: "VAROLUŞ" },
+    { text: "Her insan iki kez ölür; nefes almayı bıraktığında ve biri adını son kez söylediğinde.", author: "Banksy", tag: "TRAJEDY" },
+    { text: "Hayatın amacı mutlu olmak değildir. Faydalı, onurlu ve şefkatli olmaktır.", author: "Ralph Waldo Emerson", tag: "VAROLUŞ" },
+    { text: "Hayat yakın çekimde bir trajedi, uzak çekimde bir komedidir.", author: "Charlie Chaplin", tag: "TRAJEDY" },
+    { text: "Yıldızlar karanlık olmadan parıldayamaz.", author: "D.H. Sidebottom", tag: "ACI" },
+    { text: "Şimdiki an her zaman var olmuş olacak.", author: "Epiktetos", tag: "VAROLUŞ" },
+    { text: "Memento mori — öleceğini unutma.", author: "Stoacı Gelenek", tag: "VAROLUŞ" },
+    { text: "Biz ruhsal bir deneyim yaşayan insanlar değil, insan deneyimi yaşayan ruhsal varlıklarız.", author: "Pierre Teilhard de Chardin", tag: "VAROLUŞ" },
+    { text: "Diz çökerek yaşamaktansa ayakta ölmeyi tercih ederim.", author: "Emiliano Zapata", tag: "VAROLUŞ" },
+    { text: "Zirvelere doğru süren mücadelenin kendisi bir insanın kalbini doldurmaya yeter.", author: "Albert Camus", tag: "VAROLUŞ" },
+    { text: "Varoluş özden önce gelir.", author: "Jean-Paul Sartre", tag: "VAROLUŞ" },
+    { text: "En ağır yük, yaşanmamış bir hayattır.", author: "C.G. Jung", tag: "TRAJEDY" },
+    { text: "Dolaşanların hepsi kaybolmuş değildir.", author: "J.R.R. Tolkien", tag: "VAROLUŞ" },
+    { text: "Gölge olmadan güneş olmaz; geceyi bilmek zorunludur.", author: "Albert Camus", tag: "TRAJEDY" },
+    { text: "Güçlü olmak tek seçeneğin olana kadar ne kadar güçlü olduğunu bilemezsin.", author: "Bob Marley", tag: "ACI" },
+    { text: "Zorluğun ortasında fırsat yatar.", author: "Albert Einstein", tag: "ACI" },
+    { text: "Yaşamak dünyanın en nadir şeyidir. Çoğu insan yalnızca var olur, o kadar.", author: "Oscar Wilde", tag: "VAROLUŞ" },
+    { text: "Hepimiz kırıkız. Işık böyle içeri girer.", author: "Ernest Hemingway", tag: "ACI" },
+    { text: "Ben başıma gelenlerin değil, olmayı seçtiklerimin ürünüyüm.", author: "C.G. Jung", tag: "VAROLUŞ" },
+    { text: "En güçlü ruhlar acıdan doğar; en büyük karakterler yaralarla işlenmiştir.", author: "Khalil Gibran", tag: "ACI" },
+    { text: "Önemli olan hayatınızdaki yıllar değil, yıllarınızdaki hayattır.", author: "Abraham Lincoln", tag: "VAROLUŞ" },
+    { text: "Evren kendini deneyimliyor; biz o deneyimiz.", author: "Alan Watts", tag: "VAROLUŞ" },
+    { text: "Acı çekmek bir ceza değil, bir arınmadır.", author: "Paramahansa Yogananda", tag: "ACI" },
+    { text: "Bilinçdışını bilinçli hâle getirmezsen, hayatına yön verir ve buna kader dersin.", author: "C.G. Jung", tag: "BİLGELİK" },
+    { text: "Varlığın merkezinde cevabı bulursun.", author: "Lao Tzu", tag: "BİLGELİK" },
+    { text: "Bilgelik hayranlıkla başlar.", author: "Sokrates", tag: "BİLGELİK" },
+    { text: "Gerçek nadiren saf ve hiçbir zaman basit değildir.", author: "Oscar Wilde", tag: "BİLGELİK" },
+    { text: "Yalnızca ölüler savaşın sonunu gördü.", author: "Platon", tag: "TRAJEDY" },
+    { text: "İnsan en çok korktuğu ama hiç gelmeyecek acıdan acı çeker.", author: "Fyodor Dostoyevski", tag: "ACI" },
+    { text: "İyi ol; karşılaştığın herkes zor bir savaş veriyor.", author: "Platon", tag: "ACI" },
+    { text: "Bilinç bir hastalıktır.", author: "Miguel de Unamuno", tag: "TRAJEDY" },
+    { text: "Umitsizliğin en yaygın biçimi kim olduğunu bilmemektir.", author: "Søren Kierkegaard", tag: "VAROLUŞ" },
+    { text: "Büyüyüm, içimde çokluklar barındırıyorum.", author: "Walt Whitman", tag: "VAROLUŞ" },
+    { text: "Gerçeklik, ona inanmayı bıraktığında bile ortadan kalkmayan şeydir.", author: "Philip K. Dick", tag: "VAROLUŞ" },
+    { text: "Canavarlarla savaşan, canavar olmamaya dikkat etmelidir.", author: "Friedrich Nietzsche", tag: "BİLGELİK" },
+    { text: "Tanrı'nın dili sessizliktir; geri kalan her şey kötü bir tercümedir.", author: "Rumi", tag: "VAROLUŞ" },
+  ],
+  es: [
+    { text: "El obstáculo es el camino.", author: "Marco Aurelio", tag: "ESTOICISMO" },
+    { text: "Quien tiene un porqué para vivir puede soportar casi cualquier cómo.", author: "Friedrich Nietzsche", tag: "EXISTENCIA" },
+    { text: "Sufrimos más en la imaginación que en la realidad.", author: "Séneca", tag: "TRAGEDIA" },
+    { text: "Vivir es sufrir; sobrevivir es encontrar sentido en el sufrimiento.", author: "Friedrich Nietzsche", tag: "DOLOR" },
+    { text: "La muerte no es nada para nosotros; cuando existimos, la muerte no está presente.", author: "Epicuro", tag: "EXISTENCIA" },
+    { text: "La única forma de lidiar con un mundo no libre es volverse tan absolutamente libre que tu mera existencia sea un acto de rebelión.", author: "Albert Camus", tag: "LIBERTAD" },
+    { text: "En lo más profundo del invierno, aprendí finalmente que había en mí un verano invencible.", author: "Albert Camus", tag: "DOLOR" },
+    { text: "El hombre está condenado a ser libre.", author: "Jean-Paul Sartre", tag: "EXISTENCIA" },
+    { text: "Sin música, la vida sería un error.", author: "Friedrich Nietzsche", tag: "VIDA" },
+    { text: "Todos estamos solos, nacemos solos, morimos solos.", author: "Hunter S. Thompson", tag: "SOLEDAD" },
+    { text: "Cuídate de no perder la sustancia al aferrarte a la sombra.", author: "Esopo", tag: "SABIDURÍA" },
+    { text: "Pienso, luego existo.", author: "René Descartes", tag: "EXISTENCIA" },
+    { text: "El infierno son los otros.", author: "Jean-Paul Sartre", tag: "TRAGEDIA" },
+    { text: "Dios ha muerto. Dios sigue muerto. Y nosotros lo hemos matado.", author: "Friedrich Nietzsche", tag: "EXISTENCIA" },
+    { text: "Una vida sin examen no vale la pena vivirse.", author: "Sócrates", tag: "EXISTENCIA" },
+    { text: "Hay que imaginarse a Sísifo feliz.", author: "Albert Camus", tag: "TRAGEDIA" },
+    { text: "Todo se pierde en el momento en que se gana.", author: "Arthur Schopenhauer", tag: "TRAGEDIA" },
+    { text: "La vida es una larga preparación para algo que nunca sucede.", author: "W.B. Yeats", tag: "TRAGEDIA" },
+    { text: "La herida es el lugar por donde entra la luz.", author: "Rumi", tag: "DOLOR" },
+    { text: "El dolor es inevitable. El sufrimiento es opcional.", author: "Haruki Murakami", tag: "DOLOR" },
+    { text: "Ninguna gran mente ha existido sin un toque de locura.", author: "Aristóteles", tag: "EXISTENCIA" },
+    { text: "Conócete a ti mismo.", author: "Sócrates", tag: "SABIDURÍA" },
+    { text: "Lo que no me destruye me hace más fuerte.", author: "Friedrich Nietzsche", tag: "DOLOR" },
+    { text: "El miedo a la muerte viene del miedo a la vida.", author: "Mark Twain", tag: "TRAGEDIA" },
+    { text: "Amar es ser vulnerable.", author: "C.S. Lewis", tag: "DOLOR" },
+    { text: "La vida es sufrimiento.", author: "Gautama Buda", tag: "DOLOR" },
+    { text: "Amor fati — ama tu destino.", author: "Friedrich Nietzsche", tag: "EXISTENCIA" },
+    { text: "Estar completamente vivo es estar en dolor.", author: "Fyodor Dostoevsky", tag: "DOLOR" },
+    { text: "El hombre es el único animal que debe ser alentado a vivir.", author: "Friedrich Nietzsche", tag: "TRAGEDIA" },
+    { text: "No es la muerte lo que un hombre debe temer, sino nunca comenzar a vivir.", author: "Marco Aurelio", tag: "EXISTENCIA" },
+    { text: "La tragedia de la vida no es que termine tan pronto, sino que esperamos tanto para comenzarla.", author: "W.M. Lewis", tag: "TRAGEDIA" },
+    { text: "El que da luz debe soportar el ardor.", author: "Viktor Frankl", tag: "DOLOR" },
+    { text: "Hasta la noche más oscura terminará y el sol saldrá.", author: "Victor Hugo", tag: "ESPERANZA" },
+    { text: "Solo hay un problema filosófico verdaderamente serio, y ese es el suicidio.", author: "Albert Camus", tag: "TRAGEDIA" },
+    { text: "Lo absurdo nace del enfrentamiento entre la necesidad humana y el silencio irracional del mundo.", author: "Albert Camus", tag: "EXISTENCIA" },
+    { text: "La vida debe ser comprendida hacia atrás; pero debe vivirse hacia adelante.", author: "Søren Kierkegaard", tag: "EXISTENCIA" },
+    { text: "La angustia es el vértigo de la libertad.", author: "Søren Kierkegaard", tag: "EXISTENCIA" },
+    { text: "La forma más común de desesperación es no ser quien eres.", author: "Søren Kierkegaard", tag: "EXISTENCIA" },
+    { text: "La pobreza más terrible es la soledad.", author: "Madre Teresa", tag: "SOLEDAD" },
+    { text: "Donde hay vida, hay dolor.", author: "Arthur Schopenhauer", tag: "DOLOR" },
+    { text: "Todo es vanidad y aflicción de espíritu.", author: "Rey Salomón", tag: "TRAGEDIA" },
+    { text: "Eres responsable de lo que no haces.", author: "Jean-Paul Sartre", tag: "EXISTENCIA" },
+    { text: "La realidad es simplemente una ilusión, aunque muy persistente.", author: "Albert Einstein", tag: "EXISTENCIA" },
+    { text: "Morimos dos veces: cuando dejamos de respirar y cuando alguien dice nuestro nombre por última vez.", author: "Banksy", tag: "TRAGEDIA" },
+    { text: "La vida es una tragedia vista de cerca, pero una comedia vista desde lejos.", author: "Charlie Chaplin", tag: "TRAGEDIA" },
+    { text: "Las estrellas no pueden brillar sin oscuridad.", author: "D.H. Sidebottom", tag: "DOLOR" },
+    { text: "Memento mori — recuerda que morirás.", author: "Tradición Estoica", tag: "EXISTENCIA" },
+    { text: "No somos seres humanos teniendo una experiencia espiritual, sino seres espirituales teniendo una experiencia humana.", author: "Pierre Teilhard de Chardin", tag: "EXISTENCIA" },
+    { text: "La lucha en sí misma hacia las alturas basta para llenar el corazón de un hombre.", author: "Albert Camus", tag: "EXISTENCIA" },
+    { text: "La existencia precede a la esencia.", author: "Jean-Paul Sartre", tag: "EXISTENCIA" },
+    { text: "La carga más pesada es una vida no vivida.", author: "C.G. Jung", tag: "TRAGEDIA" },
+    { text: "No todos los que vagan están perdidos.", author: "J.R.R. Tolkien", tag: "EXISTENCIA" },
+    { text: "No hay sol sin sombra, y es imprescindible conocer la noche.", author: "Albert Camus", tag: "TRAGEDIA" },
+    { text: "Nunca sabes lo fuerte que eres hasta que ser fuerte es tu única opción.", author: "Bob Marley", tag: "DOLOR" },
+    { text: "En medio de la dificultad yace la oportunidad.", author: "Albert Einstein", tag: "DOLOR" },
+    { text: "Vivir es lo más raro del mundo. La mayoría de la gente simplemente existe.", author: "Oscar Wilde", tag: "EXISTENCIA" },
+    { text: "Todos estamos rotos. Así es como entra la luz.", author: "Ernest Hemingway", tag: "DOLOR" },
+    { text: "No soy lo que me ha pasado. Soy lo que elijo convertirme.", author: "C.G. Jung", tag: "EXISTENCIA" },
+    { text: "De las almas más fuertes emergieron del sufrimiento; los caracteres más grandes están marcados por cicatrices.", author: "Khalil Gibran", tag: "DOLOR" },
+    { text: "No son los años en tu vida lo que cuenta. Es la vida en tus años.", author: "Abraham Lincoln", tag: "EXISTENCIA" },
+    { text: "Somos el universo experimentándose a sí mismo.", author: "Alan Watts", tag: "EXISTENCIA" },
+    { text: "El sufrimiento no es un castigo, es una purificación.", author: "Paramahansa Yogananda", tag: "DOLOR" },
+    { text: "Hasta que no hagas consciente lo inconsciente, dirigirá tu vida y lo llamarás destino.", author: "C.G. Jung", tag: "SABIDURÍA" },
+    { text: "En el centro de tu ser tienes la respuesta.", author: "Lao Tzu", tag: "SABIDURÍA" },
+    { text: "La sabiduría comienza en el asombro.", author: "Sócrates", tag: "SABIDURÍA" },
+    { text: "La verdad raramente es pura y nunca simple.", author: "Oscar Wilde", tag: "SABIDURÍA" },
+    { text: "Solo los muertos han visto el fin de la guerra.", author: "Platón", tag: "TRAGEDIA" },
+    { text: "El hombre sufre más por el sufrimiento que teme pero que nunca llega.", author: "Fyodor Dostoevsky", tag: "DOLOR" },
+    { text: "Sé amable, porque cada persona que conoces está librando una dura batalla.", author: "Platón", tag: "DOLOR" },
+    { text: "La conciencia es una enfermedad.", author: "Miguel de Unamuno", tag: "TRAGEDIA" },
+    { text: "Soy grande, contengo multitudes.", author: "Walt Whitman", tag: "EXISTENCIA" },
+    { text: "La realidad es aquello que, cuando dejas de creer en ello, no desaparece.", author: "Philip K. Dick", tag: "EXISTENCIA" },
+    { text: "Quien lucha contra monstruos debe cuidar de no convertirse en monstruo.", author: "Friedrich Nietzsche", tag: "SABIDURÍA" },
+    { text: "El lenguaje de Dios es el silencio; todo lo demás es una mala traducción.", author: "Rumi", tag: "EXISTENCIA" },
+  ]
+};
+
+let currentLang = 'en';
+let quotes = [];
+let currentIndex = 0;
+let autoTimer = null;
+let controlsTimer = null;
+let controlsVisible = true;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startApp(lang) {
+  currentLang = lang;
+  quotes = shuffle(quotesData[lang]);
+  currentIndex = 0;
+
+  const langScreen = document.getElementById('lang-screen');
+  const app = document.getElementById('app');
+
+  langScreen.style.transition = 'opacity 0.8s';
+  langScreen.style.opacity = '0';
+  setTimeout(() => {
+    langScreen.style.display = 'none';
+    app.style.display = 'flex';
+    showQuote(true);
+    startControlsTimer();
+  }, 800);
+}
+
+function calcDuration(text) {
+  const words = text.split(' ').length;
+  const base = Math.max(5000, words * 600);
+  return Math.min(base, 15000);
+}
+
+function showQuote(initial = false) {
+  const q = quotes[currentIndex];
+  const container = document.getElementById('quote-container');
+  const curtain = document.getElementById('curtain');
+
+  // CoD style curtain
+  curtain.style.transition = 'none';
+  curtain.style.opacity = initial ? '1' : '0.85';
+
+  setTimeout(() => {
+    document.getElementById('quote-line').style.opacity = '0';
+    document.getElementById('quote-text').innerHTML = `"${q.text}"`;
+    document.getElementById('quote-text').style.opacity = '0';
+    document.getElementById('quote-author').textContent = `— ${q.author}`;
+    document.getElementById('quote-author').style.opacity = '0';
+    document.getElementById('quote-tag').textContent = `[ ${q.tag} ]`;
+    document.getElementById('quote-tag').style.opacity = '0';
+
+    container.classList.remove('quote-animate');
+    void container.offsetWidth;
+    container.classList.add('quote-animate');
+
+    curtain.style.transition = 'opacity 0.7s ease';
+    curtain.style.opacity = '0';
+
+    // Update counter
+    document.getElementById('counter').textContent =
+      `${String(currentIndex + 1).padStart(2,'0')} / ${String(quotes.length).padStart(2,'0')}`;
+
+    // Progress bar
+    const duration = calcDuration(q.text);
+    const bar = document.getElementById('progress-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    void bar.offsetWidth;
+    bar.style.transition = `width ${duration}ms linear`;
+    bar.style.width = '100%';
+
+    // Auto advance
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => nextQuote(), duration);
+
+  }, initial ? 600 : 300);
+}
+
+function nextQuote() {
+  currentIndex = (currentIndex + 1) % quotes.length;
+  if (currentIndex === 0) quotes = shuffle(quotes);
+  triggerTransition();
+}
+
+function prevQuote() {
+  currentIndex = (currentIndex - 1 + quotes.length) % quotes.length;
+  triggerTransition();
+}
+
+function triggerTransition() {
+  const curtain = document.getElementById('curtain');
+  curtain.style.transition = 'opacity 0.35s ease';
+  curtain.style.opacity = '0.9';
+  if (autoTimer) clearTimeout(autoTimer);
+  setTimeout(() => showQuote(), 350);
+}
+
+// Click anywhere to advance
+document.getElementById('app').addEventListener('click', function(e) {
+  const ctrl = document.getElementById('controls');
+  if (ctrl.contains(e.target)) return;
+  nextQuote();
+  resetControlsTimer();
+});
+
+// Controls hide/show
+function startControlsTimer() {
+  if (controlsTimer) clearTimeout(controlsTimer);
+  controlsTimer = setTimeout(() => {
+    document.getElementById('controls').style.opacity = '0';
+    document.getElementById('counter').style.opacity = '0';
+    controlsVisible = false;
+  }, 10000);
+}
+
+function resetControlsTimer() {
+  document.getElementById('controls').style.opacity = '1';
+  document.getElementById('counter').style.opacity = '1';
+  controlsVisible = true;
+  startControlsTimer();
+}
+
+document.addEventListener('mousemove', resetControlsTimer);
+document.addEventListener('touchstart', resetControlsTimer);
+
+// Screenshot
+function takeScreenshot() {
+  const flash = document.getElementById('flash');
+  flash.style.transition = 'none';
+  flash.style.opacity = '0.9';
+  setTimeout(() => {
+    flash.style.transition = 'opacity 0.5s ease';
+    flash.style.opacity = '0';
+  }, 80);
+
+  // Show recording indicator briefly
+  const msg = document.getElementById('hidden-msg');
+  msg.style.animation = 'pulse 0.5s ease 3';
+  msg.style.opacity = '1';
+  setTimeout(() => { msg.style.opacity = '0'; msg.style.animation = 'none'; }, 1600);
+
+  // Try html2canvas or just inform
+  if (typeof html2canvas !== 'undefined') {
+    html2canvas(document.body).then(canvas => {
+      const a = document.createElement('a');
+      a.download = 'memento-mori.png';
+      a.href = canvas.toDataURL();
+      a.click();
+    });
+  } else {
+    // Fallback: open print dialog styled for screenshot
+    window.print();
+  }
+}
+
+// Fullscreen
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextQuote(); resetControlsTimer(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevQuote(); resetControlsTimer(); }
+  if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  if (e.key === 's' || e.key === 'S') takeScreenshot();
+});
+</script>
+</body>
+</html>

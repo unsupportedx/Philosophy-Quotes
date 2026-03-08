@@ -1704,12 +1704,11 @@ function triggerTransition() {
   setTimeout(() => showQuote(), 850);
 }
 
-// Click anywhere to advance
+// Click anywhere to freeze/unfreeze
 document.getElementById('app').addEventListener('click', function(e) {
   const ctrl = document.getElementById('controls');
   if (ctrl.contains(e.target)) return;
-  if (frozen) return;
-  nextQuote();
+  toggleFreeze();
   resetControlsTimer();
 });
 

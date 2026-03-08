@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Philosophy</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&family=Share+Tech+Mono&display=swap');
 
@@ -1732,43 +1733,94 @@ function resetControlsTimer() {
 document.addEventListener('mousemove', resetControlsTimer);
 document.addEventListener('touchstart', resetControlsTimer);
 
-// Screenshot
+// Screenshot - Manuel Canvas
 function takeScreenshot() {
-  const flash = document.getElementById('flash');
-  flash.style.transition = 'none';
-  flash.style.opacity = '0.85';
-  setTimeout(() => {
-    flash.style.transition = 'opacity 0.6s ease';
-    flash.style.opacity = '0';
-  }, 80);
+  const q = quotes[currentIndex];
+  const canvas = document.createElement('canvas');
+  const scale = 2;
+  canvas.width  = window.innerWidth  * scale;
+  canvas.height = window.innerHeight * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  const W = window.innerWidth;
+  const H = window.innerHeight;
 
-  // Hide controls before capture
-  const controls = document.getElementById('controls');
-  const counter = document.getElementById('counter');
-  const prevOpC = controls.style.opacity;
-  const prevOpN = counter.style.opacity;
-  controls.style.opacity = '0';
-  counter.style.opacity = '0';
+  // Siyah arka plan
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, W, H);
 
-  setTimeout(() => {
-    html2canvas(document.body, {
-      backgroundColor: '#000000',
-      scale: window.devicePixelRatio || 2,
-      useCORS: true,
-      logging: false
-    }).then(canvas => {
-      controls.style.opacity = prevOpC;
-      counter.style.opacity = prevOpN;
-      const a = document.createElement('a');
-      a.download = 'philosophy-quote.png';
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    }).catch(() => {
-      controls.style.opacity = prevOpC;
-      counter.style.opacity = prevOpN;
-      showToast('⚠ İndirme başarısız');
-    });
-  }, 150);
+  // Vignette
+  const vignette = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(0,0,0,0.8)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, W, H);
+
+  // Altın yatay çizgi
+  const lineY = H/2 - 80;
+  const lineGrad = ctx.createLinearGradient(W/2-60, 0, W/2+60, 0);
+  lineGrad.addColorStop(0, 'rgba(200,169,110,0)');
+  lineGrad.addColorStop(0.5, 'rgba(200,169,110,0.8)');
+  lineGrad.addColorStop(1, 'rgba(200,169,110,0)');
+  ctx.strokeStyle = lineGrad;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 60, lineY);
+  ctx.lineTo(W/2 + 60, lineY);
+  ctx.stroke();
+
+  // Font boyutunu mevcut element'ten al
+  const quotEl = document.getElementById('quote-text');
+  const currentFontSize = parseInt(window.getComputedStyle(quotEl).fontSize) || 28;
+
+  // Söz metni - word wrap
+  const maxW = W * 0.75;
+  const quoteStr = `"${q.text}"`;
+  ctx.font = `300 italic ${currentFontSize}px "Crimson Pro", Georgia, serif`;
+  ctx.fillStyle = '#e8e0d0';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const words = quoteStr.split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+
+  const lineHeight = currentFontSize * 1.7;
+  const totalH = lines.length * lineHeight;
+  let startY = H/2 - totalH/2 + lineHeight/2 - 10;
+
+  for (const l of lines) {
+    ctx.fillText(l, W/2, startY);
+    startY += lineHeight;
+  }
+
+  // Yazar
+  ctx.font = `400 13px "Share Tech Mono", monospace`;
+  ctx.fillStyle = '#c8a96e';
+  ctx.letterSpacing = '0.3em';
+  ctx.fillText(`— ${q.author}`.toUpperCase(), W/2, startY + 20);
+
+  // Tag
+  ctx.font = `400 10px "Share Tech Mono", monospace`;
+  ctx.fillStyle = '#8b1a1a';
+  ctx.fillText(`[ ${q.tag} ]`, W/2, startY + 44);
+
+  // İndir
+  const a = document.createElement('a');
+  a.download = 'philosophy-quote.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  showToast('📸 Kaydedildi');
 }
 
 function showToast(msg) {

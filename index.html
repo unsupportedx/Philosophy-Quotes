@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&family=Share+Tech+Mono&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&family=Share+Tech+Mono&family=Lora:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Source+Serif+4:ital,wght@0,300;0,600;1,300;1,600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,300;0,700;1,300;1,700&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,600&family=Josefin+Sans:wght@300;400;700&family=Raleway:ital,wght@0,300;0,700;1,300&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -401,9 +401,23 @@
       A+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
     <div class="ctrl-divider"></div>
+    <button class="ctrl-btn" onclick="toggleFontPicker()" title="Font seç">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>FONT
+    </button>
+    <div class="ctrl-divider"></div>
     <button class="ctrl-btn" onclick="toggleFullscreen()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
     </button>
+  </div>
+
+  <!-- Font Picker Panel -->
+  <div id="font-picker" style="
+    display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.95); border:1px solid rgba(200,169,110,0.25);
+    border-radius:12px; padding:12px 8px; z-index:1000;
+    backdrop-filter:blur(12px); flex-direction:column; gap:4px; min-width:240px;
+    max-height:60vh; overflow-y:auto;
+  ">
   </div>
 </div>
 
@@ -1607,6 +1621,7 @@ function startApp(lang) {
     langScreen.style.display = 'none';
     app.style.display = 'flex';
     showQuote(true);
+    applyPrefs();
     startControlsTimer();
   }, 800);
 }
@@ -1711,6 +1726,18 @@ document.getElementById('app').addEventListener('click', function(e) {
   if (ctrl.contains(e.target)) return;
   toggleFreeze();
   resetControlsTimer();
+});
+
+document.getElementById('app').addEventListener('dblclick', function(e) {
+  const ctrl = document.getElementById('controls');
+  if (ctrl.contains(e.target)) return;
+  const q = quotes[currentIndex];
+  const txt = `"${q.text}" — ${q.author}`;
+  navigator.clipboard.writeText(txt).then(() => {
+    showToast('📋 Panoya kopyalandı');
+  }).catch(() => {
+    showToast('⚠ Kopyalanamadı');
+  });
 });
 
 // Controls hide/show
@@ -1845,12 +1872,104 @@ function showToast(msg) {
 }
 
 // Font size
-let fontSize = 32;
+// Tercihleri yükle
+const savedPrefs = (() => { try { return JSON.parse(localStorage.getItem('phil_prefs')) || {}; } catch { return {}; } })();
+let fontSize = savedPrefs.fontSize || 32;
 const minFont = 16, maxFont = 56;
 function changeFontSize(dir) {
   fontSize = Math.min(maxFont, Math.max(minFont, fontSize + dir * 2));
   document.getElementById('quote-text').style.fontSize = fontSize + 'px';
+  savePrefs();
   showToast('Aa  ' + fontSize + 'px');
+}
+
+// Font picker
+const fonts = [
+  { name: 'Crimson Pro',       label: 'Crimson Pro',        weight: '300', style: 'italic' },
+  { name: 'Crimson Pro',       label: 'Crimson Pro Bold',   weight: '700', style: 'italic' },
+  { name: 'Lora',              label: 'Lora',               weight: '400', style: 'italic' },
+  { name: 'Lora',              label: 'Lora Bold',          weight: '700', style: 'italic' },
+  { name: 'Merriweather',      label: 'Merriweather',       weight: '300', style: 'italic' },
+  { name: 'Merriweather',      label: 'Merriweather Bold',  weight: '700', style: 'italic' },
+  { name: 'Playfair Display',  label: 'Playfair Display',   weight: '400', style: 'italic' },
+  { name: 'Playfair Display',  label: 'Playfair Bold',      weight: '700', style: 'italic' },
+  { name: 'Cormorant Garamond',label: 'Cormorant Light',    weight: '300', style: 'italic' },
+  { name: 'Cormorant Garamond',label: 'Cormorant Bold',     weight: '600', style: 'italic' },
+  { name: 'EB Garamond',       label: 'EB Garamond',        weight: '400', style: 'italic' },
+  { name: 'PT Serif',          label: 'PT Serif',           weight: '400', style: 'italic' },
+  { name: 'PT Serif',          label: 'PT Serif Bold',      weight: '700', style: 'normal' },
+  { name: 'Source Serif 4',    label: 'Source Serif Light', weight: '300', style: 'italic' },
+  { name: 'Source Serif 4',    label: 'Source Serif Bold',  weight: '600', style: 'italic' },
+  { name: 'Josefin Sans',      label: 'Josefin Sans Light', weight: '300', style: 'normal' },
+  { name: 'Josefin Sans',      label: 'Josefin Sans Bold',  weight: '700', style: 'normal' },
+  { name: 'Raleway',           label: 'Raleway Light',      weight: '300', style: 'italic' },
+  { name: 'Raleway',           label: 'Raleway Bold',       weight: '700', style: 'normal' },
+  { name: 'Libre Baskerville', label: 'Libre Baskerville',  weight: '400', style: 'italic' },
+];
+let currentFont = fonts.find(f => f.label === savedPrefs.fontLabel) || fonts[0];
+let fontPickerOpen = false;
+
+function savePrefs() {
+  try {
+    localStorage.setItem('phil_prefs', JSON.stringify({
+      fontSize,
+      fontLabel: currentFont.label
+    }));
+  } catch {}
+}
+
+function buildFontPicker() {
+  const panel = document.getElementById('font-picker');
+  panel.innerHTML = '';
+  fonts.forEach(f => {
+    const isActive = f.name === currentFont.name && f.label === currentFont.label;
+    const btn = document.createElement('button');
+    btn.style.cssText = `
+      background: ${isActive ? 'rgba(200,169,110,0.15)' : 'transparent'};
+      border: 1px solid ${isActive ? 'rgba(200,169,110,0.5)' : 'rgba(255,255,255,0.07)'};
+      color: #e8e0d0; border-radius:8px; padding:10px 16px; cursor:pointer;
+      font-family:'${f.name}', serif; font-style:${f.style}; font-weight:${f.weight}; font-size:17px;
+      text-align:left; width:100%; transition:background 0.2s;
+    `;
+    btn.textContent = f.label;
+    btn.onmouseover = () => btn.style.background = 'rgba(200,169,110,0.1)';
+    btn.onmouseout  = () => btn.style.background = isActive ? 'rgba(200,169,110,0.15)' : 'transparent';
+    btn.onclick = () => {
+      currentFont = f;
+      applyFont();
+      savePrefs();
+      buildFontPicker();
+      toggleFontPicker();
+    };
+    panel.appendChild(btn);
+  });
+}
+
+function applyFont() {
+  const el = document.getElementById('quote-text');
+  el.style.fontFamily  = `'${currentFont.name}', serif`;
+  el.style.fontStyle   = currentFont.style;
+  el.style.fontWeight  = currentFont.weight;
+  showToast(currentFont.label);
+}
+
+function applyPrefs() {
+  const el = document.getElementById('quote-text');
+  el.style.fontSize    = fontSize + 'px';
+  el.style.fontFamily  = `'${currentFont.name}', serif`;
+  el.style.fontStyle   = currentFont.style;
+  el.style.fontWeight  = currentFont.weight;
+}
+
+function toggleFontPicker() {
+  const panel = document.getElementById('font-picker');
+  fontPickerOpen = !fontPickerOpen;
+  if (fontPickerOpen) {
+    buildFontPicker();
+    panel.style.display = 'flex';
+  } else {
+    panel.style.display = 'none';
+  }
 }
 
 // Fullscreen

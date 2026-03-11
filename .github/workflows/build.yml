@@ -43,3 +43,4 @@ jobs:
         with:
           name: Philosophy-Quotes
           path: MyApp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+

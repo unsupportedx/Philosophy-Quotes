@@ -5,8 +5,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -37,8 +42,11 @@ jobs:
           print("Done!")
           EOF
       - run: cd MyApp && cordova build android
-      - run: git tag v${{ github.run_number }}
-      - run: git push origin v${{ github.run_number }}
+      - run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git tag v${{ github.run_number }}
+          git push origin v${{ github.run_number }}
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:

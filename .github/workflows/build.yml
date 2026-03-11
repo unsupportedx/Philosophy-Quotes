@@ -46,3 +46,10 @@ jobs:
         with:
           name: Philosophy-Quotes
           path: MyApp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0
+          files: MyApp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

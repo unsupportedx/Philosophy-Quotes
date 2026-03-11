@@ -17,7 +17,9 @@ jobs:
       - run: npm install -g cordova
       - run: cordova create MyApp com.unsupportedx.philosophyquotes "Philosophy Quotes"
       - run: cp index.html MyApp/www/
-      - run: cp icon.png MyApp/res/icon.png || true
+      - run: mkdir -p MyApp/res && cp icon.png MyApp/res/icon.png
+      - run: |
+          sed -i 's|</widget>|    <icon src="res/icon.png" />\n</widget>|' MyApp/config.xml
       - run: cd MyApp && cordova platform add android
       - run: cd MyApp && cordova build android
       - uses: actions/upload-artifact@v4

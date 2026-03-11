@@ -37,10 +37,12 @@ jobs:
           print("Done!")
           EOF
       - run: cd MyApp && cordova build android
+      - run: git tag v${{ github.run_number }}
+      - run: git push origin v${{ github.run_number }}
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.0
+          tag_name: v${{ github.run_number }}
           files: MyApp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

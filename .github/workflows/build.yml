@@ -22,17 +22,22 @@ jobs:
       - run: |
           python3 << 'EOF'
           from PIL import Image
-          import shutil, os
-          sizes = [36,48,72,96,144,192]
-          names = ['ldpi','mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi']
+          import os
+          sizes = {'mipmap-ldpi':36,'mipmap-mdpi':48,'mipmap-hdpi':72,'mipmap-xhdpi':96,'mipmap-xxhdpi':144,'mipmap-xxxhdpi':192}
           img = Image.open('icon.png').convert('RGBA')
-          for size, name in zip(sizes, names):
-            out = f'MyApp/platforms/android/app/src/main/res/mipmap-{name}'
-            os.makedirs(out, exist_ok=True)
-            resized = img.resize((size,size), Image.LANCZOS)
-            resized.save(f'{out}/ic_launcher.png')
-            resized.save(f'{out}/ic_launcher_round.png')
+          base = 'MyApp/platforms/android/app/src/main/res/'
+          for folder, size in sizes.items():
+              path = base + folder
+              os.makedirs(path, exist_ok=True)
+              r = img.resize((size,size), Image.LANCZOS)
+              r.save(f'{path}/ic_launcher.png')
+              r.save(f'{path}/ic_launcher_round.png')
+              r.save(f'{path}/ic_launcher_foreground.png')
+          print("Icons replaced!")
           EOF
+      - run: |
+          find MyApp/platforms/android -name "ic_launcher.xml" -delete
+          find MyApp/platforms/android -name "ic_launcher_round.xml" -delete
       - run: cd MyApp && cordova build android
       - uses: actions/upload-artifact@v4
         with:

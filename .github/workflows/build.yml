@@ -17,10 +17,22 @@ jobs:
       - run: npm install -g cordova
       - run: cordova create MyApp com.unsupportedx.philosophyquotes "Philosophy Quotes"
       - run: cp index.html MyApp/www/
-      - run: mkdir -p MyApp/res && cp icon.png MyApp/res/icon.png
-      - run: |
-          sed -i 's|</widget>|    <icon src="res/icon.png" />\n</widget>|' MyApp/config.xml
       - run: cd MyApp && cordova platform add android
+      - run: pip install Pillow
+      - run: |
+          python3 << 'EOF'
+          from PIL import Image
+          import shutil, os
+          sizes = [36,48,72,96,144,192]
+          names = ['ldpi','mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi']
+          img = Image.open('icon.png').convert('RGBA')
+          for size, name in zip(sizes, names):
+            out = f'MyApp/platforms/android/app/src/main/res/mipmap-{name}'
+            os.makedirs(out, exist_ok=True)
+            resized = img.resize((size,size), Image.LANCZOS)
+            resized.save(f'{out}/ic_launcher.png')
+            resized.save(f'{out}/ic_launcher_round.png')
+          EOF
       - run: cd MyApp && cordova build android
       - uses: actions/upload-artifact@v4
         with:

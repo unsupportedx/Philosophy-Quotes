@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '18'
       - run: npm install -g cordova
-      - run: cordova create MyApp com.unsupportedx.philosophyquotes "Philosophy Quotes"
+      - run: cordova create MyApp com.unsupportedx.endlessfaller "Endless Faller"
       - run: cp index.html MyApp/www/
       - run: cd MyApp && cordova platform add android
       - run: pip install Pillow
@@ -23,15 +23,10 @@ jobs:
           python3 << 'EOF'
           from PIL import Image
           import os, glob, shutil
-
           img = Image.open('icon.png').convert('RGBA')
           base = 'MyApp/platforms/android/app/src/main/res/'
-
-          # Tüm mipmap klasörlerini tamamen sil ve yeniden oluştur
           for folder in glob.glob(base + 'mipmap-*'):
               shutil.rmtree(folder)
-              print(f"Deleted: {folder}")
-
           sizes = {'mipmap-ldpi':36,'mipmap-mdpi':48,'mipmap-hdpi':72,'mipmap-xhdpi':96,'mipmap-xxhdpi':144,'mipmap-xxxhdpi':192}
           for folder, size in sizes.items():
               path = base + folder
@@ -42,11 +37,7 @@ jobs:
           print("Done!")
           EOF
       - run: cd MyApp && cordova build android
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Philosophy-Quotes
-          path: MyApp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
-name: Create Release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0

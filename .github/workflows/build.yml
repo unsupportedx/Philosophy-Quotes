@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '18'
       - run: npm install -g cordova
-      - run: cordova create MyApp com.unsupportedx.endlessfaller "Endless Faller"
+      - run: cordova create MyApp com.unsupportedx.philosophyquotes "Philosophy Quotes"
       - run: cp index.html MyApp/www/
       - run: cd MyApp && cordova platform add android
       - run: pip install Pillow

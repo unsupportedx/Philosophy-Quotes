@@ -2631,15 +2631,17 @@ function toggleFreeze() {
   }
 }
 
-function nextQuote() {
-  if (frozen) return;
+function nextQuote(force) {
+  if (frozen && !force) return;
+  if (frozen) { toggleFreeze(); }
   currentIndex = (currentIndex + 1) % quotes.length;
   if (currentIndex === 0) quotes = shuffle(quotes);
   triggerTransition();
 }
 
-function prevQuote() {
-  if (frozen) return;
+function prevQuote(force) {
+  if (frozen && !force) return;
+  if (frozen) { toggleFreeze(); }
   currentIndex = (currentIndex - 1 + quotes.length) % quotes.length;
   triggerTransition();
 }
@@ -2679,11 +2681,11 @@ document.getElementById('app').addEventListener('touchend', function(e) {
   if (touchMoved && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
     // Horizontal swipe
     if (dx < 0) {
-      // Sağdan sola → sonraki
-      if (!frozen) { nextQuote(); resetControlsTimer(); }
+      // Sağdan sola → sonraki (donukken de çalışır)
+      nextQuote(true); resetControlsTimer();
     } else {
-      // Soldan sağa → önceki
-      if (!frozen) { prevQuote(); resetControlsTimer(); }
+      // Soldan sağa → önceki (donukken de çalışır)
+      prevQuote(true); resetControlsTimer();
     }
   } else if (!touchMoved) {
     // Tap → freeze/unfreeze
@@ -2961,8 +2963,8 @@ function toggleFullscreen() {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); if (!frozen) { nextQuote(); resetControlsTimer(); } }
-  if (e.key === 'ArrowLeft') { e.preventDefault(); if (!frozen) { prevQuote(); resetControlsTimer(); } }
+  if (e.key === 'ArrowRight') { e.preventDefault(); nextQuote(true); resetControlsTimer(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevQuote(true); resetControlsTimer(); }
   if (e.key === 'f' || e.key === 'F') toggleFullscreen();
   if (e.key === ' ' && frozen) { e.preventDefault(); toggleFreeze(); }
   if (e.key === 'p' || e.key === 'P') toggleFreeze();

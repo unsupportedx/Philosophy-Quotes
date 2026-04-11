@@ -2613,37 +2613,51 @@ function toggleFreeze() {
   const bar = document.getElementById('progress-bar');
   if (frozen) {
     if (autoTimer) clearTimeout(autoTimer);
-    bar.style.transition = 'none';
+    // Bar olduğu yerde dondur, mavi tonlara geçir
+    bar.style.transition = 'background 0.6s ease';
+    bar.style.background = 'linear-gradient(to right, #1a3a8b, #4a9eff)';
+    bar.style.opacity = '0.85';
     btn.classList.add('active');
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>RESUME`;
   } else {
     btn.classList.remove('active');
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/></svg>FREEZE`;
-    // Restart auto-advance
+    // Rengi normale döndür, sonra baştan doldur
+    bar.style.transition = 'background 0.4s ease';
+    bar.style.background = 'linear-gradient(to right, var(--red), var(--accent))';
+    bar.style.opacity = '0.6';
     const q = quotes[currentIndex];
     const duration = calcDuration(q.text);
-    bar.style.transition = 'none';
-    bar.style.width = '0%';
-    void bar.offsetWidth;
-    bar.style.transition = `width ${duration}ms linear`;
-    bar.style.width = '100%';
-    autoTimer = setTimeout(() => nextQuote(), duration);
+    setTimeout(() => {
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      void bar.offsetWidth;
+      bar.style.transition = `width ${duration}ms linear`;
+      bar.style.width = '100%';
+    }, 400);
+    autoTimer = setTimeout(() => nextQuote(), duration + 400);
   }
 }
 
 function nextQuote(force) {
   if (frozen && !force) return;
-  if (frozen) { toggleFreeze(); }
   currentIndex = (currentIndex + 1) % quotes.length;
   if (currentIndex === 0) quotes = shuffle(quotes);
-  triggerTransition();
+  if (force) {
+    showQuoteInstant();
+  } else {
+    triggerTransition();
+  }
 }
 
 function prevQuote(force) {
   if (frozen && !force) return;
-  if (frozen) { toggleFreeze(); }
   currentIndex = (currentIndex - 1 + quotes.length) % quotes.length;
-  triggerTransition();
+  if (force) {
+    showQuoteInstant();
+  } else {
+    triggerTransition();
+  }
 }
 
 function triggerTransition() {
@@ -2652,6 +2666,58 @@ function triggerTransition() {
   curtain.style.opacity = '1';
   if (autoTimer) clearTimeout(autoTimer);
   setTimeout(() => showQuote(), 850);
+}
+
+function showQuoteInstant() {
+  const q = quotes[currentIndex];
+  const curtain = document.getElementById('curtain');
+
+  // Hide curtain instantly
+  curtain.style.transition = 'none';
+  curtain.style.opacity = '0';
+
+  document.getElementById('quote-line').style.opacity = '0';
+  document.getElementById('quote-text').innerHTML = `"${q.text}"`;
+  document.getElementById('quote-text').style.opacity = '0';
+  document.getElementById('quote-author').textContent = `— ${q.author}`;
+  document.getElementById('quote-author').style.opacity = '0';
+  document.getElementById('quote-tag').textContent = `[ ${q.tag} ]`;
+  document.getElementById('quote-tag').style.opacity = '0';
+
+  const container = document.getElementById('quote-container');
+  container.classList.remove('quote-animate');
+  void container.offsetWidth;
+  container.classList.add('quote-animate');
+
+  // Fade in quote elements with animation
+  requestAnimationFrame(() => {
+    document.getElementById('quote-line').style.opacity = '1';
+    document.getElementById('quote-text').style.opacity = '1';
+    document.getElementById('quote-author').style.opacity = '1';
+    document.getElementById('quote-tag').style.opacity = '1';
+  });
+
+  document.getElementById('counter').textContent =
+    `${String(currentIndex + 1).padStart(2,'0')} / ${String(quotes.length).padStart(2,'0')}`;
+
+  // Update progress bar only if not frozen
+  if (!frozen) {
+    const duration = calcDuration(q.text);
+    const bar = document.getElementById('progress-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    void bar.offsetWidth;
+    bar.style.transition = `width ${duration}ms linear`;
+    bar.style.width = '100%';
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => nextQuote(), duration);
+  } else {
+    // Frozen: stop progress bar
+    const bar = document.getElementById('progress-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    if (autoTimer) clearTimeout(autoTimer);
+  }
 }
 
 // Touch swipe for prev/next
@@ -2668,7 +2734,7 @@ document.getElementById('app').addEventListener('touchstart', function(e) {
 document.getElementById('app').addEventListener('touchmove', function(e) {
   const dx = Math.abs(e.touches[0].clientX - touchStartX);
   const dy = Math.abs(e.touches[0].clientY - touchStartY);
-  if (dx > 8 || dy > 8) touchMoved = true;
+  if (dx > 5 || dy > 5) touchMoved = true;
 }, { passive: true });
 
 document.getElementById('app').addEventListener('touchend', function(e) {
@@ -2678,7 +2744,7 @@ document.getElementById('app').addEventListener('touchend', function(e) {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
 
-  if (touchMoved && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+  if (touchMoved && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
     // Horizontal swipe
     if (dx < 0) {
       // Sağdan sola → sonraki (donukken de çalışır)
@@ -2716,8 +2782,12 @@ document.getElementById('app').addEventListener('dblclick', function(e) {
   });
 });
 
-// Controls hide/show
+// Controls hide/show — sadece başlangıçta bir kez gösterilir, sonra gizlenir
+let controlsShownOnce = false;
+
 function startControlsTimer() {
+  if (controlsShownOnce) return;
+  controlsShownOnce = true;
   if (controlsTimer) clearTimeout(controlsTimer);
   controlsTimer = setTimeout(() => {
     document.getElementById('controls').style.opacity = '0';
@@ -2725,20 +2795,12 @@ function startControlsTimer() {
     document.getElementById('font-corner-btn').style.opacity = '0';
     document.getElementById('fs-corner-btn').style.opacity = '0';
     controlsVisible = false;
-  }, 2000);
+  }, 3000);
 }
 
 function resetControlsTimer() {
-  document.getElementById('controls').style.opacity = '1';
-  document.getElementById('counter').style.opacity = '1';
-  document.getElementById('font-corner-btn').style.opacity = '1';
-  document.getElementById('fs-corner-btn').style.opacity = '1';
-  controlsVisible = true;
-  startControlsTimer();
+  // Artık mouse/touch hareketinde panel tekrar gösterilmiyor
 }
-
-document.addEventListener('mousemove', resetControlsTimer);
-document.addEventListener('touchstart', resetControlsTimer);
 
 // Screenshot - Manuel Canvas
 function takeScreenshot() {

@@ -1,0 +1,10 @@
+{
+  "appId": "com.philosophy.quotes",
+  "appName": "Philosophy",
+  "webDir": ".",
+  "plugins": {
+    "Filesystem": {
+      "iosScheme": "capacitor"
+    }
+  }
+}

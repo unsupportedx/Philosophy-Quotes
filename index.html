@@ -2544,6 +2544,11 @@ function startApp(lang) {
   const langScreen = document.getElementById('lang-screen');
   const app = document.getElementById('app');
 
+  // Tam ekran
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+
   langScreen.style.transition = 'opacity 0.8s';
   langScreen.style.opacity = '0';
   setTimeout(() => {
@@ -2611,7 +2616,6 @@ function toggleFreeze() {
     bar.style.transition = 'none';
     btn.classList.add('active');
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>RESUME`;
-    showToast('❄ Donduruldu');
   } else {
     btn.classList.remove('active');
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/></svg>FREEZE`;
@@ -2624,7 +2628,6 @@ function toggleFreeze() {
     bar.style.transition = `width ${duration}ms linear`;
     bar.style.width = '100%';
     autoTimer = setTimeout(() => nextQuote(), duration);
-    showToast('▶ Devam ediyor');
   }
 }
 
@@ -2649,10 +2652,52 @@ function triggerTransition() {
   setTimeout(() => showQuote(), 850);
 }
 
-// Click anywhere to freeze/unfreeze
+// Touch swipe for prev/next
+let touchStartX = 0;
+let touchStartY = 0;
+let touchMoved = false;
+
+document.getElementById('app').addEventListener('touchstart', function(e) {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchMoved = false;
+}, { passive: true });
+
+document.getElementById('app').addEventListener('touchmove', function(e) {
+  const dx = Math.abs(e.touches[0].clientX - touchStartX);
+  const dy = Math.abs(e.touches[0].clientY - touchStartY);
+  if (dx > 8 || dy > 8) touchMoved = true;
+}, { passive: true });
+
+document.getElementById('app').addEventListener('touchend', function(e) {
+  const ctrl = document.getElementById('controls');
+  if (ctrl.contains(e.target)) return;
+
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+
+  if (touchMoved && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+    // Horizontal swipe
+    if (dx < 0) {
+      // Sağdan sola → sonraki
+      if (!frozen) { nextQuote(); resetControlsTimer(); }
+    } else {
+      // Soldan sağa → önceki
+      if (!frozen) { prevQuote(); resetControlsTimer(); }
+    }
+  } else if (!touchMoved) {
+    // Tap → freeze/unfreeze
+    toggleFreeze();
+    resetControlsTimer();
+  }
+});
+
+// Click anywhere to freeze/unfreeze (desktop)
 document.getElementById('app').addEventListener('click', function(e) {
   const ctrl = document.getElementById('controls');
   if (ctrl.contains(e.target)) return;
+  // Only for mouse clicks, not touch (touch handled above)
+  if (e.pointerType === 'touch') return;
   toggleFreeze();
   resetControlsTimer();
 });
@@ -2678,7 +2723,7 @@ function startControlsTimer() {
     document.getElementById('font-corner-btn').style.opacity = '0';
     document.getElementById('fs-corner-btn').style.opacity = '0';
     controlsVisible = false;
-  }, 10000);
+  }, 2000);
 }
 
 function resetControlsTimer() {
